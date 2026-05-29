@@ -1,0 +1,283 @@
+const BattleReplay = (() => {
+    let logData = [];
+    let currentIndex = 0;
+    let timer = null;
+    let playing = false;
+    let speed = 1;
+    const BASE_INTERVAL = 600;
+
+    function getInterval() {
+        return BASE_INTERVAL / speed;
+    }
+
+    function getLogEl() {
+        return document.getElementById("battle-log");
+    }
+
+    function addLogLine(text) {
+        const el = getLogEl();
+        if (!el) return;
+        const p = document.createElement("p");
+        p.textContent = text;
+        p.className = "battle-log-line";
+        el.appendChild(p);
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function getSideData(side) {
+        const el = document.getElementById(`spin-${side}`);
+        if (!el) return null;
+        return {
+            maxSpeed: parseFloat(el.dataset.maxSpeed) || 100,
+        };
+    }
+
+    function processEntry(entry) {
+        if (!entry) return;
+        if (entry.text) {
+            entry.text.split("\n").forEach((line) => addLogLine(line));
+        }
+        if (!entry.effects) return;
+
+        const maxA = getSideData("a")?.maxSpeed || 200;
+        const maxB = getSideData("b")?.maxSpeed || 200;
+
+        entry.effects.forEach((fx) => {
+            switch (fx.type) {
+                case "battle_start":
+                    break;
+                case "turn_start":
+                    break;
+                case "accel":
+                    BattleEffects.accel(fx.target, fx.old_speed, fx.new_speed);
+                    BattleEffects.updateSpeed(fx.target, fx.new_speed, fx.target === "a" ? maxA : maxB);
+                    BattleSound.accel();
+                    break;
+                case "accel_fail":
+                    BattleEffects.accelFail(fx.target);
+                    BattleSound.accelFail();
+                    break;
+                case "first_strike":
+                    BattleEffects.firstStrike(fx.target);
+                    BattleSound.firstStrike();
+                    break;
+                case "attack":
+                    BattleEffects.attack(fx.attacker, fx.defender, fx.crit);
+                    if (fx.crit) {
+                        BattleSound.crit();
+                    } else {
+                        BattleSound.attack();
+                    }
+                    break;
+                case "counter_fail":
+                    BattleEffects.counterFail(fx.target);
+                    break;
+                case "event_positive":
+                    BattleEffects.eventPositive(fx.target, fx.float_text);
+                    BattleSound.eventPositive();
+                    break;
+                case "event_negative":
+                    BattleEffects.eventNegative(fx.target, fx.float_text);
+                    BattleSound.eventNegative();
+                    break;
+                case "endure":
+                    BattleEffects.endure(fx.target);
+                    BattleSound.endure();
+                    BattleEffects.updateSpeed(fx.target, fx.new_speed, fx.target === "a" ? maxA : maxB);
+                    break;
+                case "stop":
+                    BattleEffects.stop(fx.target);
+                    BattleSound.stop();
+                    break;
+                case "stop_both":
+                    BattleEffects.stopBoth();
+                    BattleSound.stopBoth();
+                    break;
+                case "decel":
+                    BattleEffects.decel(fx.a_old, fx.a_new, fx.b_old, fx.b_new, maxA, maxB);
+                    BattleSound.decel();
+                    break;
+                case "battle_end":
+                    BattleEffects.battleEnd(fx.winner);
+                    BattleSound.battleEnd(fx.winner);
+                    pause();
+                    showEndControls();
+                    break;
+            }
+        });
+    }
+
+    function step() {
+        if (currentIndex >= logData.length) {
+            pause();
+            return;
+        }
+        processEntry(logData[currentIndex]);
+        currentIndex++;
+    }
+
+    function play() {
+        if (playing) return;
+        if (currentIndex >= logData.length) return;
+        playing = true;
+        updatePlayButton();
+        timer = setInterval(() => {
+            step();
+            if (currentIndex >= logData.length) {
+                pause();
+            }
+        }, getInterval());
+    }
+
+    function pause() {
+        playing = false;
+        if (timer) clearInterval(timer);
+        timer = null;
+        updatePlayButton();
+    }
+
+    function skip() {
+        pause();
+        while (currentIndex < logData.length) {
+            processEntry(logData[currentIndex]);
+            currentIndex++;
+        }
+    }
+
+    function restart() {
+        pause();
+        currentIndex = 0;
+        const el = getLogEl();
+        if (el) el.innerHTML = "";
+        BattleEffects.reset();
+        initSpeedBars();
+        hideEndControls();
+        play();
+    }
+
+    function setSpeed(s) {
+        speed = s;
+        updateSpeedButtons();
+        if (playing) {
+            clearInterval(timer);
+            timer = setInterval(step, getInterval());
+        }
+    }
+
+    function initSpeedBars() {
+        const elA = document.getElementById("spin-a");
+        const elB = document.getElementById("spin-b");
+        if (elA) {
+            const s = parseFloat(elA.dataset.initSpeed);
+            const m = parseFloat(elA.dataset.maxSpeed);
+            BattleEffects.updateSpeed("a", s, m);
+        }
+        if (elB) {
+            const s = parseFloat(elB.dataset.initSpeed);
+            const m = parseFloat(elB.dataset.maxSpeed);
+            BattleEffects.updateSpeed("b", s, m);
+        }
+    }
+
+    function updatePlayButton() {
+        const btn = document.getElementById("btn-play");
+        if (!btn) return;
+        btn.textContent = playing ? "⏸" : "▶";
+    }
+
+    function updateSpeedButtons() {
+        document.querySelectorAll(".btn-speed").forEach((btn) => {
+            const s = parseFloat(btn.dataset.speed);
+            btn.classList.toggle("bg-indigo-600", s === speed);
+            btn.classList.toggle("text-white", s === speed);
+            btn.classList.toggle("bg-gray-700", s !== speed);
+            btn.classList.toggle("text-gray-400", s !== speed);
+        });
+    }
+
+    function showEndControls() {
+        const el = document.getElementById("end-controls");
+        if (el) el.classList.remove("hidden");
+    }
+
+    function hideEndControls() {
+        const el = document.getElementById("end-controls");
+        if (el) el.classList.add("hidden");
+    }
+
+    return {
+        init(data) {
+            logData = data;
+            currentIndex = 0;
+            speed = 1;
+            initSpeedBars();
+            updateSpeedButtons();
+            hideEndControls();
+            setTimeout(() => play(), 500);
+        },
+        play,
+        pause,
+        skip,
+        restart,
+        setSpeed,
+        toggleSound() {
+            const on = BattleSound.toggle();
+            const btn = document.getElementById("btn-sound");
+            if (btn) btn.textContent = on ? "🔊" : "🔇";
+        },
+    };
+})();
+
+document.addEventListener("DOMContentLoaded", () => {
+    const data = JSON.parse(localStorage.getItem("battle_data") || "null");
+    if (!data) {
+        document.getElementById("battle-log").innerHTML = '<p class="text-gray-500">전투 데이터가 없습니다.</p>';
+        return;
+    }
+
+    document.getElementById("spin-a-name").textContent = data.spin_a.name;
+    document.getElementById("spin-a-img").src = data.spin_a.image_url;
+    document.getElementById("spin-b-name").textContent = data.spin_b.name;
+    document.getElementById("spin-b-img").src = data.spin_b.image_url;
+
+    if (data.spin_a.spin_type_color) {
+        const discA = document.getElementById("spin-a");
+        discA.style.borderColor = data.spin_a.spin_type_color;
+    }
+    if (data.spin_b.spin_type_color) {
+        const discB = document.getElementById("spin-b");
+        discB.style.borderColor = data.spin_b.spin_type_color;
+    }
+    const typeA = document.getElementById("spin-a-type");
+    const typeB = document.getElementById("spin-b-type");
+    if (typeA && data.spin_a.spin_type_name) {
+        typeA.textContent = data.spin_a.spin_type_name;
+        typeA.style.color = data.spin_a.spin_type_color;
+    }
+    if (typeB && data.spin_b.spin_type_name) {
+        typeB.textContent = data.spin_b.spin_type_name;
+        typeB.style.color = data.spin_b.spin_type_color;
+    }
+
+    const initSpeedA = data.log[0]?.effects?.[0]?.stats_a?.speed || 50;
+    const initSpeedB = data.log[0]?.effects?.[0]?.stats_b?.speed || 50;
+    document.getElementById("spin-a").dataset.initSpeed = initSpeedA;
+    document.getElementById("spin-a").dataset.maxSpeed = initSpeedA * 2;
+    document.getElementById("spin-b").dataset.initSpeed = initSpeedB;
+    document.getElementById("spin-b").dataset.maxSpeed = initSpeedB * 2;
+
+    BattleSound.init();
+    BattleReplay.init(data.log);
+
+    document.getElementById("btn-play").addEventListener("click", () => {
+        const el = document.getElementById("btn-play");
+        if (el.textContent === "▶") BattleReplay.play();
+        else BattleReplay.pause();
+    });
+    document.getElementById("btn-restart").addEventListener("click", () => BattleReplay.restart());
+    document.getElementById("btn-skip").addEventListener("click", () => BattleReplay.skip());
+    document.getElementById("btn-sound").addEventListener("click", () => BattleReplay.toggleSound());
+    document.querySelectorAll(".btn-speed").forEach((btn) => {
+        btn.addEventListener("click", () => BattleReplay.setSpeed(parseFloat(btn.dataset.speed)));
+    });
+});

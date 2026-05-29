@@ -1,0 +1,167 @@
+{% extends "base.html" %}
+
+{% block title %}{{ spin_image.name }} - SpinBattle{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto px-4 py-16">
+    <div class="bg-gray-800 rounded-lg overflow-hidden">
+        <div class="md:flex">
+            <div class="md:w-1/2 flex items-center justify-center p-6 bg-gray-900/50">
+                <img src="{{ spin_image.image.url }}" alt="팽이 이미지" class="max-w-full max-h-80 rounded-lg object-contain">
+            </div>
+            <div class="md:w-1/2 flex items-center justify-center p-6">
+                <svg viewBox="0 0 300 300" class="w-full max-w-xs">
+                    <defs>
+                        <linearGradient id="statFill" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#6366f1;stop-opacity:0.35" />
+                            <stop offset="100%" style="stop-color:#a78bfa;stop-opacity:0.35" />
+                        </linearGradient>
+                    </defs>
+                    {% for ring in grid_rings %}
+                    <polygon points="{{ ring }}" fill="none" stroke="#374151" stroke-width="0.8" />
+                    {% endfor %}
+                    {% for spoke in spokes %}
+                    <line x1="150" y1="150" x2="{{ spoke.x2 }}" y2="{{ spoke.y2 }}" stroke="#374151" stroke-width="0.5" />
+                    {% endfor %}
+                    <polygon points="{{ stat_polygon }}" fill="url(#statFill)" stroke="#818cf8" stroke-width="1.5" />
+                    {% for label in labels %}
+                    <text x="{{ label.x }}" y="{{ label.y }}"
+                          text-anchor="middle" dominant-baseline="middle"
+                          font-size="10" fill="#9ca3af">{{ label.name }}</text>
+                    {% endfor %}
+                </svg>
+            </div>
+        </div>
+
+        <div class="p-6 border-t border-gray-700">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <div class="flex items-center gap-2 mb-1">
+                        <h2 class="text-xl font-bold text-gray-100">{{ spin_image.name }}</h2>
+                        <span class="text-xs font-bold px-2 py-0.5 rounded-full border"
+                              style="color:{{ spin_type_color }}; border-color:{{ spin_type_color }}; background:{{ spin_type_color }}15">{{ spin_type_name }}</span>
+                        {% if user == spin_image.user %}
+                        <button type="button" onclick="document.getElementById('rename-form').classList.toggle('hidden')" class="text-xs text-gray-500 hover:text-gray-300 transition">수정</button>
+                        {% endif %}
+                    </div>
+                    <form id="rename-form" method="post" action="{% url 'rename_image' spin_image.pk %}" class="hidden mb-2 flex gap-2">
+                        {% csrf_token %}
+                        <input type="text" name="name" value="{{ spin_image.name }}" maxlength="30"
+                               class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-gray-100 focus:outline-none focus:border-indigo-500 w-40">
+                        <button type="submit" class="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded transition">저장</button>
+                    </form>
+                    <a href="{% url 'user_list' %}" class="text-indigo-400 hover:text-indigo-300 font-bold">{{ spin_image.user.username }}</a>
+                    {% if spin_image.user.bio %}
+                    <p class="text-gray-400 text-sm mt-1">{{ spin_image.user.bio }}</p>
+                    {% endif %}
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-gray-500">대전 점수</p>
+                    <p class="text-3xl font-bold {% if spin_image.battle_score >= 1000 %}text-indigo-400{% else %}text-red-400{% endif %}">{{ spin_image.battle_score }}</p>
+                    <div class="flex gap-3 justify-end mt-1 text-sm">
+                        <span class="text-green-400">{{ spin_image.wins }}승</span>
+                        <span class="text-red-400">{{ spin_image.losses }}패</span>
+                        {% with total_battles=spin_image.wins|add:spin_image.losses %}
+                        <span class="text-gray-400">
+                            {% if total_battles > 0 %}승률 {{ spin_image.wins|floatformat:0 }}/{{ total_battles }}{% else %}-{% endif %}
+                        </span>
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+            <p class="text-xs text-gray-600 font-mono mb-4">{{ spin_image.hash }}</p>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {% for s in stat_detail %}
+                <div class="bg-gray-700/50 rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm text-gray-300">{{ s.name }}</span>
+                        <span class="text-xs font-bold px-1.5 py-0.5 rounded" style="color:{{ s.grade_color }}; background:{{ s.grade_color }}20">{{ s.grade }}</span>
+                    </div>
+                    <div class="w-full bg-gray-600 rounded-full h-2">
+                        <div class="h-2 rounded-full" style="width:{{ s.value }}%; background:{{ s.grade_color }}"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1 text-right">{{ s.value }}</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if user.is_authenticated and user != spin_image.user and user.spin_images.exists %}
+            <div class="mt-6 pt-4 border-t border-gray-700">
+                <button type="button" onclick="openBattleModal()"
+                        class="w-full bg-red-600 hover:bg-red-500 text-white py-2 rounded-lg font-bold transition">
+                    친선 대전
+                </button>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if user.is_authenticated and user != spin_image.user and user.spin_images.exists %}
+<div id="battle-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gray-800 rounded-lg max-w-md w-full p-6">
+        <h3 class="text-lg font-bold mb-4">내 팽이를 선택하세요</h3>
+        <div class="space-y-3">
+            {% for img in user.spin_images.all %}
+            <button type="button" onclick="startBattle({{ img.pk }})"
+                    class="w-full flex items-center gap-3 bg-gray-700 hover:bg-gray-600 rounded-lg p-3 transition text-left">
+                <img src="{{ img.image.url }}" alt="{{ img.name }}" class="w-12 h-12 object-cover rounded">
+                <div>
+                    <p class="font-bold text-gray-200">{{ img.name }}</p>
+                    <p class="text-xs text-gray-400">{{ img.battle_score }}점 / {{ img.wins }}승 {{ img.losses }}패</p>
+                </div>
+            </button>
+            {% endfor %}
+        </div>
+        <button type="button" onclick="closeBattleModal()" class="mt-4 w-full text-gray-500 hover:text-gray-300 py-2 transition">취소</button>
+    </div>
+</div>
+
+<script>
+function openBattleModal() {
+    document.getElementById('battle-modal').classList.remove('hidden');
+}
+function closeBattleModal() {
+    document.getElementById('battle-modal').classList.add('hidden');
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function startBattle(mySpinPk) {
+    const csrftoken = getCookie('csrftoken');
+    const opponentPk = {{ spin_image.pk }};
+    fetch('{% url "friendly_battle" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrftoken,
+        },
+        body: `my_spin=${mySpinPk}&opponent_spin=${opponentPk}`,
+    })
+    .then(resp => resp.json())
+    .then(data => {
+        localStorage.setItem('battle_data', JSON.stringify(data));
+        window.location.href = '{% url "battle_friendly" %}';
+    })
+    .catch(err => {
+        alert('전투 시작에 실패했습니다.');
+        console.error(err);
+    });
+}
+</script>
+{% endif %}
+{% endblock %}

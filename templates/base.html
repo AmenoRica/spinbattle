@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SpinBattle{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
+    <nav class="bg-gray-800 border-b border-gray-700">
+        <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+            <a href="{% url 'home' %}" class="text-xl font-bold text-indigo-400 hover:text-indigo-300">SpinBattle</a>
+            <div class="flex items-center gap-4">
+                <a href="{% url 'user_list' %}" class="text-gray-300 hover:text-white transition">유저 목록</a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'upload_image' %}" class="text-gray-300 hover:text-white transition">이미지 업로드</a>
+                    <span class="text-gray-300">반갑습니다, <a href="{% url 'profile' %}" class="text-indigo-400 hover:text-indigo-300">{{ user.username }}</a>님</span>
+                    <form method="post" action="{% url 'logout' %}" class="inline">
+                        {% csrf_token %}
+                        <button type="submit" class="text-gray-400 hover:text-white transition">로그아웃</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'login' %}" class="text-gray-300 hover:text-white transition">로그인</a>
+                    <a href="{% url 'signup' %}" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded transition">회원가입</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-1">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="bg-gray-800 border-t border-gray-700 text-center text-gray-500 text-sm py-3">
+        &copy; SpinBattle
+    </footer>
+</body>
+</html>

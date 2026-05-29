@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}이미지 업로드 - SpinBattle{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto px-4 py-16">
+    <h1 class="text-3xl font-bold text-center mb-8">팽이 이미지 업로드</h1>
+
+    {% if spin_images.count < 3 %}
+    <form method="post" enctype="multipart/form-data" class="bg-gray-800 rounded-lg p-6 mb-8">
+        {% csrf_token %}
+        <div class="mb-4">
+            <label for="{{ form.name.id_for_label }}" class="block text-sm text-gray-400 mb-1">팽이 이름</label>
+            <input type="text" name="{{ form.name.html_name }}" id="{{ form.name.id_for_label }}" maxlength="30"
+                   placeholder="팽이 이름"
+                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:outline-none focus:border-indigo-500"
+                   required>
+            {% for error in form.name.errors %}
+                <p class="text-red-400 text-sm mt-1">{{ error }}</p>
+            {% endfor %}
+        </div>
+        <div class="mb-4">
+            <label for="{{ form.image.id_for_label }}" class="block text-sm text-gray-400 mb-1">이미지 선택</label>
+            <input type="file" name="{{ form.image.html_name }}" id="{{ form.image.id_for_label }}" accept="image/*"
+                   class="w-full text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-indigo-600 file:text-white hover:file:bg-indigo-500">
+            {% for error in form.image.errors %}
+                <p class="text-red-400 text-sm mt-1">{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% if form.non_field_errors %}
+            {% for error in form.non_field_errors %}
+                <p class="text-red-400 text-sm mb-2">{{ error }}</p>
+            {% endfor %}
+        {% endif %}
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition">업로드</button>
+    </form>
+    {% else %}
+    <p class="text-center text-gray-400 mb-8">이미지는 최대 3개까지 업로드할 수 있습니다. 삭제 후 추가해주세요.</p>
+    {% endif %}
+
+    {% if spin_images %}
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {% for img in spin_images %}
+        <div class="bg-gray-800 rounded-lg overflow-hidden">
+            <a href="{% url 'spin_detail' img.pk %}"><img src="{{ img.image.url }}" alt="{{ img.name }}" class="w-full aspect-square object-cover hover:opacity-80 transition"></a>
+            <div class="p-3">
+                <p class="text-sm font-bold text-gray-200 truncate">{{ img.name }}</p>
+                <div class="flex items-center justify-between mt-1">
+                    <span class="text-xs font-bold {% if img.battle_score >= 1000 %}text-indigo-400{% else %}text-red-400{% endif %}">{{ img.battle_score }}점</span>
+                    <span class="text-xs text-gray-500">{{ img.wins }}승 {{ img.losses }}패</span>
+                </div>
+                <form method="post" action="{% url 'delete_image' img.pk %}" class="mt-2">
+                    {% csrf_token %}
+                    <button type="submit" class="w-full text-sm text-red-400 hover:text-red-300 border border-red-400/30 rounded py-1 transition">삭제</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

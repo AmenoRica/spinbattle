@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}회원가입 - SpinBattle{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto px-4 py-16">
+    <h1 class="text-3xl font-bold text-center mb-8">회원가입</h1>
+    <form method="post" class="bg-gray-800 rounded-lg p-6 space-y-4">
+        {% csrf_token %}
+        {% for field in form %}
+        <div>
+            <label for="{{ field.id_for_label }}" class="block text-sm text-gray-400 mb-1">{{ field.label }}</label>
+            <input type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+                   class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:outline-none focus:border-indigo-500"
+                   {% if field.field.required %}required{% endif %}>
+            {% for error in field.errors %}
+                <p class="text-red-400 text-sm mt-1">{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% endfor %}
+        {% if form.non_field_errors %}
+            {% for error in form.non_field_errors %}
+                <p class="text-red-400 text-sm">{{ error }}</p>
+            {% endfor %}
+        {% endif %}
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition">가입하기</button>
+    </form>
+    <p class="text-center text-gray-400 mt-4">이미 계정이 있으신가요? <a href="{% url 'login' %}" class="text-indigo-400 hover:text-indigo-300">로그인</a></p>
+</div>
+{% endblock %}

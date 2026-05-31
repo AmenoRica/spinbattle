@@ -49,7 +49,7 @@ const BattleEffects = (() => {
             spark.className = "battle-spark";
             spark.style.background = color;
             const angle = Math.random() * Math.PI * 2;
-            const dist = 30 + Math.random() * 40;
+            const dist = 50 + Math.random() * 70;
             spark.style.setProperty("--sx", `${Math.cos(angle) * dist}px`);
             spark.style.setProperty("--sy", `${Math.sin(angle) * dist}px`);
             spark.style.left = "50%";
@@ -89,14 +89,14 @@ const BattleEffects = (() => {
             disc.classList.add("spin-accel-glow");
             removeTempClass(side, "spin-accel-glow", 500);
             setSpinSpeed(side, newSpeed);
-            createFloatingText(side, "가속!", "#fbbf24");
-            createSparks(side, "#fbbf24", 5);
+            createFloatingText(side, BattleI18n.accel, "#fbbf24");
+            createSparks(side, "#fbbf24", 8);
         },
         accelFail(side) {},
         firstStrike(side) {
             const disc = getDisc(side);
             if (!disc) return;
-            createSparks(side, "#818cf8", 4);
+            createSparks(side, "#818cf8", 6);
         },
         attack(attackerSide, defenderSide, crit) {
             const atkDisc = getDisc(attackerSide);
@@ -112,7 +112,7 @@ const BattleEffects = (() => {
                 }, 120);
             }
             createSlashOnDefender(defenderSide, crit);
-            createSparks(defenderSide, crit ? "#f97316" : "#ef4444", crit ? 10 : 5);
+            createSparks(defenderSide, crit ? "#f97316" : "#ef4444", crit ? 14 : 7);
         },
         counterFail(side) {},
         eventPositive(side, floatText) {
@@ -127,7 +127,7 @@ const BattleEffects = (() => {
             if (!disc) return;
             disc.classList.add("spin-endure-aura");
             removeTempClass(side, "spin-endure-aura", 800);
-            createFloatingText(side, "인내!", "#fde68a");
+            createFloatingText(side, BattleI18n.endure, "#fde68a");
             createSparks(side, "#fde68a", 8);
         },
         stop(side) {
@@ -152,7 +152,7 @@ const BattleEffects = (() => {
             const disc = getDisc(winner);
             if (!disc) return;
             disc.classList.add("spin-winner");
-            createSparks(winner, "#fbbf24", 12);
+            createSparks(winner, "#fbbf24", 16);
         },
         reset() {
             ["a", "b"].forEach((side) => {

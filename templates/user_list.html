@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}유저 목록 - SpinBattle{% endblock %}
+{% block title %}{% trans "유저 목록" %} - SpinBattle{% endblock %}
 
 {% block content %}
 <div class="max-w-5xl mx-auto px-4 py-16">
-    <h1 class="text-3xl font-bold text-center mb-8">유저 목록</h1>
+    <h1 class="text-3xl font-bold text-center mb-8">{% trans "유저 목록" %}</h1>
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for u in users %}
         <div class="bg-gray-800 rounded-lg p-5">
@@ -16,25 +17,35 @@
                     {% endif %}
                 </div>
                 <div class="text-right">
-                    <p class="text-xs text-gray-500">대전 점수</p>
+                    <p class="text-xs text-gray-500">{% trans "대전 점수" %}</p>
                     <p class="text-lg font-bold {% if u.total_score >= 1000 %}text-indigo-400{% else %}text-red-400{% endif %}">{{ u.total_score }}</p>
+                    <div class="flex gap-2 justify-end text-xs mt-1">
+                        <span class="text-green-400">{{ u.total_wins }}{% trans "승" %}</span>
+                        <span class="text-red-400">{{ u.total_losses }}{% trans "패" %}</span>
+                    </div>
                 </div>
             </div>
             {% if u.spin_images.exists %}
-            <div class="grid grid-cols-3 gap-2">
+            <div class="space-y-2">
                 {% for img in u.spin_images.all %}
-                <a href="{% url 'spin_detail' img.pk %}" class="relative group">
-                    <img src="{{ img.image.url }}" alt="{{ img.name }}" class="w-full aspect-square object-cover rounded hover:opacity-80 transition">
-                    <div class="absolute bottom-0 left-0 right-0 bg-black/60 text-xs text-center py-0.5 rounded-b text-gray-300">{{ img.battle_score }}</div>
+                <a href="{% url 'spin_detail' img.pk %}" class="flex items-center gap-3 bg-gray-700/50 rounded-lg p-2 hover:bg-gray-700 transition">
+                    <img src="{{ img.image.url }}" alt="{{ img.name }}" class="w-10 h-10 object-cover rounded">
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-bold text-gray-200 truncate">{{ img.name }}</p>
+                        <div class="flex gap-2 text-xs">
+                            <span class="{% if img.battle_score >= 1000 %}text-indigo-400{% else %}text-red-400{% endif %}">{{ img.battle_score }}{% trans "점" %}</span>
+                            <span class="text-gray-500">{{ img.wins }}{% trans "승" %} {{ img.losses }}{% trans "패" %}</span>
+                        </div>
+                    </div>
                 </a>
                 {% endfor %}
             </div>
             {% else %}
-            <p class="text-sm text-gray-600">아직 팽이가 없습니다</p>
+            <p class="text-sm text-gray-600">{% trans "아직 팽이가 없습니다" %}</p>
             {% endif %}
         </div>
         {% empty %}
-        <p class="text-center text-gray-500 col-span-full">유저가 없습니다</p>
+        <p class="text-center text-gray-500 col-span-full">{% trans "유저가 없습니다" %}</p>
         {% endfor %}
     </div>
 </div>

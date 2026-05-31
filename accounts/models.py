@@ -1,6 +1,7 @@
 import hashlib
 
 from django.contrib.auth.models import AbstractUser
+from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 from django.db import models
 
@@ -36,7 +37,7 @@ class SpinImage(models.Model):
 
     def clean(self):
         if self.image and self.image.size > self.MAX_SIZE_BYTES:
-            raise ValidationError({"image": "이미지 크기는 5MB 이하이어야 합니다."})
+            raise ValidationError({"image": _("이미지 크기는 5MB 이하이어야 합니다.")})
         try:
             user = self.user
         except CustomUser.DoesNotExist:
@@ -44,7 +45,7 @@ class SpinImage(models.Model):
         if not self.pk:
             existing = SpinImage.objects.filter(user=user).count()
             if existing >= self.MAX_PER_USER:
-                raise ValidationError({"image": f"이미지는 최대 {self.MAX_PER_USER}개까지 업로드할 수 있습니다."})
+                raise ValidationError({"image": _("이미지는 최대 %(count)s개까지 업로드할 수 있습니다.") % {"count": self.MAX_PER_USER}})
 
     def save(self, *args, **kwargs):
         if self.image and not self.hash:

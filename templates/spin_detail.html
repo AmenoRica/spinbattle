@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load i18n %}
 
 {% block title %}{{ spin_image.name }} - SpinBattle{% endblock %}
 
@@ -7,7 +8,7 @@
     <div class="bg-gray-800 rounded-lg overflow-hidden">
         <div class="md:flex">
             <div class="md:w-1/2 flex items-center justify-center p-6 bg-gray-900/50">
-                <img src="{{ spin_image.image.url }}" alt="팽이 이미지" class="max-w-full max-h-80 rounded-lg object-contain">
+                <img src="{{ spin_image.image.url }}" alt="{% trans '팽이 이미지' %}" class="max-w-full max-h-96 rounded-lg object-contain">
             </div>
             <div class="md:w-1/2 flex items-center justify-center p-6">
                 <svg viewBox="0 0 300 300" class="w-full max-w-xs">
@@ -34,21 +35,21 @@
         </div>
 
         <div class="p-6 border-t border-gray-700">
-            <div class="flex items-center justify-between mb-4">
+            <div class="flex items-center gap-4 mb-4">
                 <div>
                     <div class="flex items-center gap-2 mb-1">
                         <h2 class="text-xl font-bold text-gray-100">{{ spin_image.name }}</h2>
                         <span class="text-xs font-bold px-2 py-0.5 rounded-full border"
                               style="color:{{ spin_type_color }}; border-color:{{ spin_type_color }}; background:{{ spin_type_color }}15">{{ spin_type_name }}</span>
                         {% if user == spin_image.user %}
-                        <button type="button" onclick="document.getElementById('rename-form').classList.toggle('hidden')" class="text-xs text-gray-500 hover:text-gray-300 transition">수정</button>
+                        <button type="button" onclick="document.getElementById('rename-form').classList.toggle('hidden')" class="text-xs text-gray-500 hover:text-gray-300 transition">{% trans "수정" %}</button>
                         {% endif %}
                     </div>
                     <form id="rename-form" method="post" action="{% url 'rename_image' spin_image.pk %}" class="hidden mb-2 flex gap-2">
                         {% csrf_token %}
                         <input type="text" name="name" value="{{ spin_image.name }}" maxlength="30"
                                class="bg-gray-700 border border-gray-600 rounded px-2 py-1 text-sm text-gray-100 focus:outline-none focus:border-indigo-500 w-40">
-                        <button type="submit" class="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded transition">저장</button>
+                        <button type="submit" class="text-sm bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded transition">{% trans "저장" %}</button>
                     </form>
                     <a href="{% url 'user_list' %}" class="text-indigo-400 hover:text-indigo-300 font-bold">{{ spin_image.user.username }}</a>
                     {% if spin_image.user.bio %}
@@ -56,14 +57,14 @@
                     {% endif %}
                 </div>
                 <div class="text-right">
-                    <p class="text-sm text-gray-500">대전 점수</p>
+                    <p class="text-sm text-gray-500">{% trans "대전 점수" %}</p>
                     <p class="text-3xl font-bold {% if spin_image.battle_score >= 1000 %}text-indigo-400{% else %}text-red-400{% endif %}">{{ spin_image.battle_score }}</p>
                     <div class="flex gap-3 justify-end mt-1 text-sm">
-                        <span class="text-green-400">{{ spin_image.wins }}승</span>
-                        <span class="text-red-400">{{ spin_image.losses }}패</span>
+                        <span class="text-green-400">{{ spin_image.wins }}{% trans "승" %}</span>
+                        <span class="text-red-400">{{ spin_image.losses }}{% trans "패" %}</span>
                         {% with total_battles=spin_image.wins|add:spin_image.losses %}
                         <span class="text-gray-400">
-                            {% if total_battles > 0 %}승률 {{ spin_image.wins|floatformat:0 }}/{{ total_battles }}{% else %}-{% endif %}
+                            {% if total_battles > 0 %}{% blocktrans with wins=spin_image.wins total=total_battles %}승률 {{ wins }}/{{ total }}{% endblocktrans %}{% else %}-{% endif %}
                         </span>
                         {% endwith %}
                     </div>
@@ -86,35 +87,44 @@
                 {% endfor %}
             </div>
 
-            {% if user.is_authenticated and user != spin_image.user and user.spin_images.exists %}
+            {% if user.is_authenticated %}
+            {% if user.spin_images.count > 1 or user != spin_image.user %}
+            {% if user.spin_images.exists %}
             <div class="mt-6 pt-4 border-t border-gray-700">
                 <button type="button" onclick="openBattleModal()"
                         class="w-full bg-red-600 hover:bg-red-500 text-white py-2 rounded-lg font-bold transition">
-                    친선 대전
+                    {% trans "친선 대전" %}
                 </button>
             </div>
+            {% endif %}
+            {% endif %}
             {% endif %}
         </div>
     </div>
 </div>
 
-{% if user.is_authenticated and user != spin_image.user and user.spin_images.exists %}
-<div id="battle-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
+{% if user.is_authenticated and user.spin_images.exists %}
+<div id="battle-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4" data-error-msg="{% trans '전투 시작에 실패했습니다.' %}">
     <div class="bg-gray-800 rounded-lg max-w-md w-full p-6">
-        <h3 class="text-lg font-bold mb-4">내 팽이를 선택하세요</h3>
+        <h3 class="text-lg font-bold mb-4">{% trans "내 팽이를 선택하세요" %}</h3>
         <div class="space-y-3">
             {% for img in user.spin_images.all %}
+            {% if img.pk != spin_image.pk %}
             <button type="button" onclick="startBattle({{ img.pk }})"
                     class="w-full flex items-center gap-3 bg-gray-700 hover:bg-gray-600 rounded-lg p-3 transition text-left">
                 <img src="{{ img.image.url }}" alt="{{ img.name }}" class="w-12 h-12 object-cover rounded">
                 <div>
                     <p class="font-bold text-gray-200">{{ img.name }}</p>
-                    <p class="text-xs text-gray-400">{{ img.battle_score }}점 / {{ img.wins }}승 {{ img.losses }}패</p>
+                    <p class="text-xs text-gray-400">{% blocktrans with score=img.battle_score wins=img.wins losses=img.losses %}{{ score }}점 / {{ wins }}승 {{ losses }}패{% endblocktrans %}</p>
                 </div>
             </button>
+            {% endif %}
             {% endfor %}
+            {% if user.spin_images.count == 1 %}
+            <p class="text-sm text-gray-500 text-center py-2">{% trans "다른 팽이가 없습니다" %}</p>
+            {% endif %}
         </div>
-        <button type="button" onclick="closeBattleModal()" class="mt-4 w-full text-gray-500 hover:text-gray-300 py-2 transition">취소</button>
+        <button type="button" onclick="closeBattleModal()" class="mt-4 w-full text-gray-500 hover:text-gray-300 py-2 transition">{% trans "취소" %}</button>
     </div>
 </div>
 
@@ -158,7 +168,7 @@ function startBattle(mySpinPk) {
         window.location.href = '{% url "battle_friendly" %}';
     })
     .catch(err => {
-        alert('전투 시작에 실패했습니다.');
+        alert(document.getElementById('battle-modal').dataset.errorMsg);
         console.error(err);
     });
 }

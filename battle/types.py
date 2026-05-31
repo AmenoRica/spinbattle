@@ -4,19 +4,24 @@ from PIL import Image
 
 
 SPIN_TYPES = {
-    "fire": {"name": "불꽃", "color": "#F08030"},
-    "water": {"name": "물", "color": "#6890F0"},
-    "grass": {"name": "풀", "color": "#78C850"},
-    "electric": {"name": "전기", "color": "#F8D030"},
-    "ice": {"name": "얼음", "color": "#98D8D8"},
-    "steel": {"name": "강철", "color": "#B8B8D0"},
-    "dragon": {"name": "드래곤", "color": "#7038F8"},
-    "dark": {"name": "악", "color": "#705848"},
-    "psychic": {"name": "에스퍼", "color": "#F85888"},
-    "fighting": {"name": "격투", "color": "#C03028"},
+    "fire": {"name_ko": "불꽃", "name_ja": "ほのお", "name_en": "Fire", "color": "#F08030"},
+    "water": {"name_ko": "물", "name_ja": "みず", "name_en": "Water", "color": "#6890F0"},
+    "grass": {"name_ko": "풀", "name_ja": "くさ", "name_en": "Grass", "color": "#78C850"},
+    "electric": {"name_ko": "전기", "name_ja": "でんき", "name_en": "Electric", "color": "#F8D030"},
+    "ice": {"name_ko": "얼음", "name_ja": "こおり", "name_en": "Ice", "color": "#98D8D8"},
+    "steel": {"name_ko": "강철", "name_ja": "はがね", "name_en": "Steel", "color": "#B8B8D0"},
+    "dragon": {"name_ko": "드래곤", "name_ja": "ドラゴン", "name_en": "Dragon", "color": "#7038F8"},
+    "dark": {"name_ko": "악", "name_ja": "あく", "name_en": "Dark", "color": "#705848"},
+    "psychic": {"name_ko": "에스퍼", "name_ja": "エスパー", "name_en": "Psychic", "color": "#F85888"},
+    "fighting": {"name_ko": "격투", "name_ja": "かくとう", "name_en": "Fighting", "color": "#C03028"},
 }
 
-SPIN_TYPE_CHOICES = [(k, v["name"]) for k, v in SPIN_TYPES.items()]
+SPIN_TYPE_CHOICES = [(k, v["name_ko"]) for k, v in SPIN_TYPES.items()]
+
+
+def get_type_name(type_key, lang="ko"):
+    t = SPIN_TYPES.get(type_key, {})
+    return t.get(f"name_{lang}", t.get("name_ko", ""))
 
 # ============================================================
 # 상성 테이블 — 공격자 속성 → 유리한 방어자 속성 목록
@@ -60,10 +65,10 @@ def compute_type_from_image(image_field):
 
         h, s, v = colorsys.rgb_to_hsv(avg_r, avg_g, avg_b)
 
-        if v < 0.2:
+        if v < 0.15:
             return "dark"
 
-        if s < 0.12:
+        if s < 0.06:
             return "ice" if v > 0.75 else "steel"
 
         hue = h * 360
@@ -72,7 +77,7 @@ def compute_type_from_image(image_field):
             return "fire"
         if hue < 40:
             return "fighting"
-        if hue < 70:
+        if hue < 75:
             return "electric"
         if hue < 160:
             return "grass"
@@ -84,4 +89,5 @@ def compute_type_from_image(image_field):
             return "dragon"
         return "psychic"
     except Exception:
-        return "steel"
+        import random
+        return random.choice(list(SPIN_TYPES.keys()))

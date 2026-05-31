@@ -1,5 +1,6 @@
+{% load i18n %}
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="{{ LANGUAGE_CODE }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,19 +11,38 @@
 <body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
     <nav class="bg-gray-800 border-b border-gray-700">
         <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-            <a href="{% url 'home' %}" class="text-xl font-bold text-indigo-400 hover:text-indigo-300">SpinBattle</a>
-            <div class="flex items-center gap-4">
-                <a href="{% url 'user_list' %}" class="text-gray-300 hover:text-white transition">유저 목록</a>
+            <div class="flex items-center gap-6">
+                <a href="{% url 'home' %}" class="text-xl font-bold text-indigo-400 hover:text-indigo-300">SpinBattle</a>
+                <div class="flex items-center gap-4">
+                    <a href="{% url 'user_list' %}" class="text-gray-300 hover:text-white transition">{% trans "유저 목록" %}</a>
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'upload_image' %}" class="text-gray-300 hover:text-white transition">{% trans "이미지 업로드" %}</a>
+                    {% if user.spin_images.exists %}
+                    <button type="button" onclick="document.getElementById('ranked-modal').classList.remove('hidden')"
+                            class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-md transition font-bold text-sm">{% trans "랭크 대전" %}</button>
+                    {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <form action="{% url 'set_language' %}" method="post" class="inline">
+                    {% csrf_token %}
+                    <input name="next" type="hidden" value="{{ request.get_full_path }}">
+                    <select name="language" onchange="this.form.submit()" class="bg-gray-700 text-gray-300 text-sm rounded px-2 py-1 border border-gray-600">
+                        <option value="ko" {% if LANGUAGE_CODE == 'ko' %}selected{% endif %}>한국어</option>
+                        <option value="ja" {% if LANGUAGE_CODE == 'ja' %}selected{% endif %}>日本語</option>
+                        <option value="en" {% if LANGUAGE_CODE == 'en' %}selected{% endif %}>English</option>
+                    </select>
+                </form>
                 {% if user.is_authenticated %}
-                    <a href="{% url 'upload_image' %}" class="text-gray-300 hover:text-white transition">이미지 업로드</a>
-                    <span class="text-gray-300">반갑습니다, <a href="{% url 'profile' %}" class="text-indigo-400 hover:text-indigo-300">{{ user.username }}</a>님</span>
+                    <a href="{% url 'profile' %}" class="text-indigo-400 hover:text-indigo-300 font-medium">{{ user.username }}</a>
                     <form method="post" action="{% url 'logout' %}" class="inline">
                         {% csrf_token %}
-                        <button type="submit" class="text-gray-400 hover:text-white transition">로그아웃</button>
+                        <button type="submit" class="text-gray-400 hover:text-white transition text-sm">{% trans "로그아웃" %}</button>
                     </form>
                 {% else %}
-                    <a href="{% url 'login' %}" class="text-gray-300 hover:text-white transition">로그인</a>
-                    <a href="{% url 'signup' %}" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1 rounded transition">회원가입</a>
+                    <a href="{% url 'login' %}" class="text-gray-300 hover:text-white transition">{% trans "로그인" %}</a>
+                    <a href="{% url 'signup' %}" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-md transition text-sm">{% trans "회원가입" %}</a>
                 {% endif %}
             </div>
         </div>
@@ -35,5 +55,74 @@
     <footer class="bg-gray-800 border-t border-gray-700 text-center text-gray-500 text-sm py-3">
         &copy; SpinBattle
     </footer>
+
+    {% if user.is_authenticated and user.spin_images.exists %}
+    <div id="ranked-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <h3 class="text-lg font-bold mb-4">{% trans "랭크 대전 — 내 팽이를 선택하세요" %}</h3>
+            <div class="space-y-3">
+                {% for img in user.spin_images.all %}
+                <button type="button" onclick="startRanked({{ img.pk }})"
+                        class="w-full flex items-center gap-3 bg-gray-700 hover:bg-gray-600 rounded-lg p-3 transition text-left">
+                    <img src="{{ img.image.url }}" alt="{{ img.name }}" class="w-12 h-12 object-cover rounded">
+                    <div>
+                        <p class="font-bold text-gray-200">{{ img.name }}</p>
+                        <p class="text-xs text-gray-400">{{ img.battle_score }}{% trans "점" %} / {{ img.wins }}{% trans "승" %} {{ img.losses }}{% trans "패" %}</p>
+                    </div>
+                </button>
+                {% endfor %}
+            </div>
+            <button type="button" onclick="document.getElementById('ranked-modal').classList.add('hidden')" class="mt-4 w-full text-gray-500 hover:text-gray-300 py-2 transition">{% trans "취소" %}</button>
+        </div>
+    </div>
+
+    <script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function startRanked(mySpinPk) {
+        const btn = event.target;
+        if (btn.disabled) return;
+        btn.disabled = true;
+        const csrftoken = getCookie('csrftoken');
+        fetch('{% url "ranked_battle" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrftoken,
+            },
+            body: `my_spin=${mySpinPk}`,
+        })
+        .then(resp => resp.json())
+        .then(data => {
+            if (data.error) {
+                alert(data.error);
+                btn.disabled = false;
+                return;
+            }
+            localStorage.setItem('battle_data', JSON.stringify(data));
+            window.location.href = '{% url "battle_friendly" %}';
+        })
+        .catch(err => {
+            alert('{% trans "전투 시작에 실패했습니다." %}');
+            btn.disabled = false;
+            console.error(err);
+        });
+    }
+    </script>
+    {% endif %}
+    {% block extra_js %}{% endblock %}
 </body>
 </html>

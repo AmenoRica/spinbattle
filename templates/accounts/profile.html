@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}프로필 - SpinBattle{% endblock %}
+{% block title %}{% trans "프로필" %} - SpinBattle{% endblock %}
 
 {% block content %}
 <div class="max-w-md mx-auto px-4 py-16">
-    <h1 class="text-3xl font-bold text-center mb-8">프로필</h1>
+    <h1 class="text-3xl font-bold text-center mb-8">{% trans "프로필" %}</h1>
     <form method="post" class="bg-gray-800 rounded-lg p-6 space-y-4 mb-8">
         {% csrf_token %}
         {% for field in form %}
@@ -26,33 +27,33 @@
         </div>
         {% endif %}
         {% endfor %}
-        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition">저장</button>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition">{% trans "저장" %}</button>
     </form>
 
     <div class="bg-gray-800 rounded-lg p-6">
         <div class="flex items-center justify-between mb-4">
-            <h2 class="text-lg font-bold">내 팽이</h2>
+            <h2 class="text-lg font-bold">{% trans "내 팽이" %}</h2>
             {% if spin_images.count < 3 %}
-            <a href="{% url 'upload_image' %}" class="text-sm text-indigo-400 hover:text-indigo-300">이미지 업로드</a>
+            <a href="{% url 'upload_image' %}" class="text-sm text-indigo-400 hover:text-indigo-300">{% trans "이미지 업로드" %}</a>
             {% endif %}
         </div>
         {% if spin_images %}
         <div class="space-y-2">
             {% for img in spin_images %}
             <a href="{% url 'spin_detail' img.pk %}" class="flex items-center gap-3 bg-gray-700/50 rounded-lg p-2 hover:bg-gray-700 transition">
-                <img src="{{ img.image.url }}" alt="{{ img.name }}" class="w-12 h-12 object-cover rounded">
+                <img src="{{ img.image.url }}" alt="{{ img.name }}" class="w-14 h-14 object-cover rounded">
                 <div class="flex-1 min-w-0">
                     <p class="text-sm font-bold text-gray-200 truncate">{{ img.name }}</p>
                     <div class="flex gap-2 text-xs">
-                        <span class="{% if img.battle_score >= 1000 %}text-indigo-400{% else %}text-red-400{% endif %}">{{ img.battle_score }}점</span>
-                        <span class="text-gray-500">{{ img.wins }}승 {{ img.losses }}패</span>
+                        <span class="{% if img.battle_score >= 1000 %}text-indigo-400{% else %}text-red-400{% endif %}">{{ img.battle_score }}{% trans "점" %}</span>
+                        <span class="text-gray-500">{{ img.wins }}{% trans "승" %} {{ img.losses }}{% trans "패" %}</span>
                     </div>
                 </div>
             </a>
             {% endfor %}
         </div>
         {% else %}
-        <p class="text-sm text-gray-600">아직 팽이가 없습니다. <a href="{% url 'upload_image' %}" class="text-indigo-400 hover:text-indigo-300">업로드하기</a></p>
+        <p class="text-sm text-gray-600">{% trans "아직 팽이가 없습니다." %} <a href="{% url 'upload_image' %}" class="text-indigo-400 hover:text-indigo-300">{% trans "업로드하기" %}</a></p>
         {% endif %}
     </div>
 </div>

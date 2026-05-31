@@ -150,9 +150,17 @@ const BattleReplay = (() => {
         const el = getLogEl();
         if (el) el.innerHTML = "";
         BattleEffects.reset();
-        initSpeedBars();
         hideEndControls();
-        play();
+
+        document.getElementById("spin-a").classList.add("stopped");
+        document.getElementById("spin-b").classList.add("stopped");
+        BattleEffects.updateSpeed("a", 0, 200);
+        BattleEffects.updateSpeed("b", 0, 200);
+
+        showCountdown(() => {
+            initSpeedBars();
+            play();
+        });
     }
 
     function setSpeed(s) {
@@ -198,6 +206,30 @@ const BattleReplay = (() => {
     function showEndControls() {
         const el = document.getElementById("end-controls");
         if (el) el.classList.remove("hidden");
+
+        const data = JSON.parse(localStorage.getItem("battle_data") || "null");
+        if (data && data.mode === "ranked") {
+            showScoreChanges(data);
+        }
+    }
+
+    function showScoreChanges(data) {
+        const diffA = data.spin_a.new_score - data.spin_a.old_score;
+        const diffB = data.spin_b.new_score - data.spin_b.old_score;
+
+        const scoreA = document.getElementById("spin-a-score");
+        const scoreB = document.getElementById("spin-b-score");
+
+        if (scoreA) {
+            const sign = diffA >= 0 ? "+" : "";
+            scoreA.textContent = `${data.spin_a.old_score} → ${data.spin_a.new_score} (${sign}${diffA})`;
+            scoreA.style.color = diffA >= 0 ? "#4ade80" : "#f87171";
+        }
+        if (scoreB) {
+            const sign = diffB >= 0 ? "+" : "";
+            scoreB.textContent = `${data.spin_b.old_score} → ${data.spin_b.new_score} (${sign}${diffB})`;
+            scoreB.style.color = diffB >= 0 ? "#4ade80" : "#f87171";
+        }
     }
 
     function hideEndControls() {
@@ -205,15 +237,55 @@ const BattleReplay = (() => {
         if (el) el.classList.add("hidden");
     }
 
+    function showCountdown(callback) {
+        const overlay = document.getElementById("countdown-overlay");
+        const textEl = document.getElementById("countdown-text");
+        if (!overlay || !textEl) { callback(); return; }
+
+        document.getElementById("spin-a").classList.add("stopped");
+        document.getElementById("spin-b").classList.add("stopped");
+
+        const steps = ["3", "2", "1", BattleI18n.countdownGo];
+        let i = 0;
+
+        overlay.classList.remove("hidden");
+
+        function next() {
+            if (i >= steps.length) {
+                overlay.classList.add("hidden");
+                document.getElementById("spin-a").classList.remove("stopped");
+                document.getElementById("spin-b").classList.remove("stopped");
+                callback();
+                return;
+            }
+            textEl.textContent = steps[i];
+            textEl.classList.remove("animate-countdown-pulse");
+            void textEl.offsetWidth;
+            textEl.classList.add("animate-countdown-pulse");
+            if (i < 3) {
+                BattleSound.countdownBeep();
+            } else {
+                BattleSound.countdownGo();
+            }
+            i++;
+            setTimeout(next, 900);
+        }
+        next();
+    }
+
     return {
         init(data) {
             logData = data;
             currentIndex = 0;
             speed = 1;
-            initSpeedBars();
             updateSpeedButtons();
             hideEndControls();
-            setTimeout(() => play(), 500);
+            BattleEffects.updateSpeed("a", 0, 200);
+            BattleEffects.updateSpeed("b", 0, 200);
+            showCountdown(() => {
+                initSpeedBars();
+                play();
+            });
         },
         play,
         pause,
@@ -231,7 +303,7 @@ const BattleReplay = (() => {
 document.addEventListener("DOMContentLoaded", () => {
     const data = JSON.parse(localStorage.getItem("battle_data") || "null");
     if (!data) {
-        document.getElementById("battle-log").innerHTML = '<p class="text-gray-500">전투 데이터가 없습니다.</p>';
+        document.getElementById("battle-log").innerHTML = '<p class="text-gray-500">' + BattleI18n.noBattleData + '</p>';
         return;
     }
 
@@ -268,6 +340,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
     BattleSound.init();
     BattleReplay.init(data.log);
+
+    const modeLabel = document.getElementById("battle-mode-label");
+    if (modeLabel) {
+        modeLabel.textContent = data.mode === "ranked" ? BattleI18n.rankedBattle : BattleI18n.friendlyBattle;
+    }
+
+    if (data.mode === "ranked") {
+        const scoreA = document.getElementById("spin-a-score");
+        const scoreB = document.getElementById("spin-b-score");
+        if (scoreA) {
+            scoreA.textContent = `${data.spin_a.old_score}${BattleI18n.pts}`;
+            scoreA.style.color = "#9ca3af";
+            scoreA.classList.remove("hidden");
+        }
+        if (scoreB) {
+            scoreB.textContent = `${data.spin_b.old_score}${BattleI18n.pts}`;
+            scoreB.style.color = "#9ca3af";
+            scoreB.classList.remove("hidden");
+        }
+    }
 
     document.getElementById("btn-play").addEventListener("click", () => {
         const el = document.getElementById("btn-play");

@@ -1,10 +1,11 @@
 {% extends "base.html" %}
+{% load i18n %}
 
-{% block title %}로그인 - SpinBattle{% endblock %}
+{% block title %}{% trans "로그인" %} - SpinBattle{% endblock %}
 
 {% block content %}
 <div class="max-w-md mx-auto px-4 py-16">
-    <h1 class="text-3xl font-bold text-center mb-8">로그인</h1>
+    <h1 class="text-3xl font-bold text-center mb-8">{% trans "로그인" %}</h1>
     <form method="post" class="bg-gray-800 rounded-lg p-6 space-y-4">
         {% csrf_token %}
         {% for field in form %}
@@ -23,8 +24,8 @@
                 <p class="text-red-400 text-sm">{{ error }}</p>
             {% endfor %}
         {% endif %}
-        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition">로그인</button>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition">{% trans "로그인" %}</button>
     </form>
-    <p class="text-center text-gray-400 mt-4">계정이 없으신가요? <a href="{% url 'signup' %}" class="text-indigo-400 hover:text-indigo-300">회원가입</a></p>
+    <p class="text-center text-gray-400 mt-4">{% trans "계정이 없으신가요?" %} <a href="{% url 'signup' %}" class="text-indigo-400 hover:text-indigo-300">{% trans "회원가입" %}</a></p>
 </div>
 {% endblock %}

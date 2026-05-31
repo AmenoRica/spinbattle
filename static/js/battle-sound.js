@@ -1,6 +1,6 @@
 const BattleSound = (() => {
     let ctx = null;
-    let enabled = true;
+    let enabled = localStorage.getItem("battleSound") === "on";
 
     function getCtx() {
         if (!ctx) {
@@ -55,12 +55,15 @@ const BattleSound = (() => {
     }
 
     return {
-        init() {
-            getCtx();
-        },
-        toggle() {
-            enabled = !enabled;
-            return enabled;
+init() {
+        const btn = document.getElementById("btn-sound");
+        if (btn) btn.textContent = enabled ? "🔊" : "🔇";
+    },
+    toggle() {
+        enabled = !enabled;
+        localStorage.setItem("battleSound", enabled ? "on" : "off");
+        if (enabled) getCtx();
+        return enabled;
         },
         isEnabled() {
             return enabled;
@@ -108,6 +111,13 @@ const BattleSound = (() => {
         },
         firstStrike() {
             playTone(600, 0.08, "square", 0.08);
+        },
+        countdownBeep() {
+            playTone(660, 0.15, "sine", 0.15);
+        },
+        countdownGo() {
+            playTone(880, 0.12, "sine", 0.15, 1320);
+            playTone(1320, 0.3, "sine", 0.12);
         },
     };
 })();

@@ -1,18 +1,19 @@
 {% extends "base.html" %}
+{% load i18n static %}
 
-{% block title %}이미지 업로드 - SpinBattle{% endblock %}
+{% block title %}{% trans "이미지 업로드" %} - SpinBattle{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto px-4 py-16">
-    <h1 class="text-3xl font-bold text-center mb-8">팽이 이미지 업로드</h1>
+    <h1 class="text-3xl font-bold text-center mb-8">{% trans "팽이 이미지 업로드" %}</h1>
 
     {% if spin_images.count < 3 %}
-    <form method="post" enctype="multipart/form-data" class="bg-gray-800 rounded-lg p-6 mb-8">
+    <form id="upload-form" method="post" enctype="multipart/form-data" class="bg-gray-800 rounded-lg p-6 mb-8">
         {% csrf_token %}
         <div class="mb-4">
-            <label for="{{ form.name.id_for_label }}" class="block text-sm text-gray-400 mb-1">팽이 이름</label>
+            <label for="{{ form.name.id_for_label }}" class="block text-sm text-gray-400 mb-1">{% trans "팽이 이름" %}</label>
             <input type="text" name="{{ form.name.html_name }}" id="{{ form.name.id_for_label }}" maxlength="30"
-                   placeholder="팽이 이름"
+                   placeholder="{% trans '팽이 이름' %}"
                    class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:outline-none focus:border-indigo-500"
                    required>
             {% for error in form.name.errors %}
@@ -20,9 +21,14 @@
             {% endfor %}
         </div>
         <div class="mb-4">
-            <label for="{{ form.image.id_for_label }}" class="block text-sm text-gray-400 mb-1">이미지 선택</label>
+            <label for="{{ form.image.id_for_label }}" class="block text-sm text-gray-400 mb-1">{% trans "이미지 선택" %}</label>
             <input type="file" name="{{ form.image.html_name }}" id="{{ form.image.id_for_label }}" accept="image/*"
                    class="w-full text-gray-300 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:bg-indigo-600 file:text-white hover:file:bg-indigo-500">
+            <p id="crop-hint" class="text-xs text-gray-500 mt-1">{% trans "이미지를 선택하면 크롭할 수 있습니다." %}</p>
+            <div id="crop-thumb-wrap" class="mt-2 hidden">
+                <p class="text-xs text-gray-400 mb-1">{% trans "크롭 결과 미리보기" %}</p>
+                <img id="crop-thumb" src="" alt="preview" class="w-24 h-24 rounded object-cover border border-gray-600">
+            </div>
             {% for error in form.image.errors %}
                 <p class="text-red-400 text-sm mt-1">{{ error }}</p>
             {% endfor %}
@@ -32,10 +38,10 @@
                 <p class="text-red-400 text-sm mb-2">{{ error }}</p>
             {% endfor %}
         {% endif %}
-        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition">업로드</button>
+        <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition">{% trans "업로드" %}</button>
     </form>
     {% else %}
-    <p class="text-center text-gray-400 mb-8">이미지는 최대 3개까지 업로드할 수 있습니다. 삭제 후 추가해주세요.</p>
+    <p class="text-center text-gray-400 mb-8">{% trans "이미지는 최대 3개까지 업로드할 수 있습니다. 삭제 후 추가해주세요." %}</p>
     {% endif %}
 
     {% if spin_images %}
@@ -46,12 +52,12 @@
             <div class="p-3">
                 <p class="text-sm font-bold text-gray-200 truncate">{{ img.name }}</p>
                 <div class="flex items-center justify-between mt-1">
-                    <span class="text-xs font-bold {% if img.battle_score >= 1000 %}text-indigo-400{% else %}text-red-400{% endif %}">{{ img.battle_score }}점</span>
-                    <span class="text-xs text-gray-500">{{ img.wins }}승 {{ img.losses }}패</span>
+                    <span class="text-xs font-bold {% if img.battle_score >= 1000 %}text-indigo-400{% else %}text-red-400{% endif %}">{{ img.battle_score }}{% trans "점" %}</span>
+                    <span class="text-xs text-gray-500">{{ img.wins }}{% trans "승" %} {{ img.losses }}{% trans "패" %}</span>
                 </div>
                 <form method="post" action="{% url 'delete_image' img.pk %}" class="mt-2">
                     {% csrf_token %}
-                    <button type="submit" class="w-full text-sm text-red-400 hover:text-red-300 border border-red-400/30 rounded py-1 transition">삭제</button>
+                    <button type="submit" class="w-full text-sm text-red-400 hover:text-red-300 border border-red-400/30 rounded py-1 transition">{% trans "삭제" %}</button>
                 </form>
             </div>
         </div>
@@ -59,4 +65,159 @@
     </div>
     {% endif %}
 </div>
+
+<div id="crop-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gray-800 rounded-lg max-w-lg w-full p-4">
+        <h3 class="text-lg font-bold mb-3">{% trans "이미지 크롭" %}</h3>
+        <div class="max-h-[60vh] overflow-hidden bg-gray-900 rounded">
+            <img id="crop-preview" src="" alt="crop" class="max-w-full block">
+        </div>
+        <div class="flex gap-3 mt-4">
+            <button type="button" id="crop-cancel" class="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 py-2 rounded transition">{% trans "취소" %}</button>
+            <button type="button" id="crop-confirm" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition">{% trans "크롭 적용" %}</button>
+        </div>
+    </div>
+</div>
+
+<div id="stats-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-gray-800 rounded-lg max-w-md w-full p-6">
+        <div class="text-center mb-4">
+            <p id="stats-name" class="text-xl font-bold text-gray-100"></p>
+            <span id="stats-type-badge" class="text-xs font-bold px-2 py-0.5 rounded-full border"></span>
+            <p id="stats-total" class="text-sm text-gray-400 mt-1"></p>
+        </div>
+        <div id="stats-list" class="grid grid-cols-2 gap-3 mb-6"></div>
+        <div class="flex gap-3">
+            <button type="button" id="stats-cancel" class="flex-1 bg-gray-700 hover:bg-gray-600 text-gray-300 py-2 rounded transition">{% trans "취소" %}</button>
+            <button type="button" id="stats-confirm" class="flex-1 bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition">{% trans "확인" %}</button>
+        </div>
+    </div>
+</div>
+
+<div id="loading-overlay" class="fixed inset-0 bg-black/50 z-40 hidden flex items-center justify-center">
+    <div class="bg-gray-800 rounded-lg px-6 py-4">
+        <p class="text-gray-100 animate-pulse">{% trans "스탯 계산 중..." %}</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.css">
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.2/cropper.min.js"></script>
+<script src="{% static 'js/crop.js' %}"></script>
+<script>
+(function() {
+    const fileInput = document.getElementById("{{ form.image.id_for_label }}");
+    const cropCancel = document.getElementById("crop-cancel");
+    const cropModal = document.getElementById("crop-modal");
+    const form = document.getElementById("upload-form");
+    const submitBtn = document.getElementById("submit-btn");
+    const statsModal = document.getElementById("stats-modal");
+    const loadingOverlay = document.getElementById("loading-overlay");
+    let pendingFormData = null;
+
+    if (fileInput) {
+        fileInput.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            if (!file.type.startsWith("image/")) return;
+            ImageCropper.showModal(file);
+        });
+    }
+
+    if (cropCancel) {
+        cropCancel.onclick = () => {
+            cropModal.classList.add("hidden");
+            if (window.Cropper && fileInput) {
+                fileInput.value = "";
+            }
+            ImageCropper.reset();
+        };
+    }
+
+    if (form) {
+        form.addEventListener("submit", (e) => {
+            e.preventDefault();
+
+            const fd = new FormData(form);
+            const croppedFile = ImageCropper.getCroppedFile();
+            if (croppedFile) {
+                fd.set("{{ form.image.html_name }}", croppedFile, croppedFile.name);
+            }
+
+            loadingOverlay.classList.remove("hidden");
+
+            fetch("{% url 'upload_preview' %}", { method: "POST", body: fd })
+                .then(resp => resp.json())
+                .then(data => {
+                    loadingOverlay.classList.add("hidden");
+                    if (data.error) {
+                        const msgs = [];
+                        if (typeof data.error === "object") {
+                            for (const field in data.error) {
+                                data.error[field].forEach(m => msgs.push(m));
+                            }
+                        } else {
+                            msgs.push(data.error);
+                        }
+                        alert(msgs.join("\n"));
+                        return;
+                    }
+                    showStatsModal(data);
+                    pendingFormData = fd;
+                })
+                .catch(() => {
+                    loadingOverlay.classList.add("hidden");
+                    alert("{% trans '업로드에 실패했습니다.' %}");
+                });
+        });
+    }
+
+    function showStatsModal(data) {
+        document.getElementById("stats-name").textContent = data.name;
+        const badge = document.getElementById("stats-type-badge");
+        badge.textContent = data.spin_type_name;
+        badge.style.color = data.spin_type_color;
+        badge.style.borderColor = data.spin_type_color;
+        badge.style.background = data.spin_type_color + "15";
+        document.getElementById("stats-total").textContent = data.total;
+
+        const list = document.getElementById("stats-list");
+        list.innerHTML = "";
+        data.stats.forEach(s => {
+            list.innerHTML += `
+                <div class="bg-gray-700/50 rounded-lg p-3">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-sm text-gray-300">${s.name}</span>
+                        <span class="text-xs font-bold px-1.5 py-0.5 rounded" style="color:${s.grade_color}; background:${s.grade_color}20">${s.grade}</span>
+                    </div>
+                    <div class="w-full bg-gray-600 rounded-full h-2">
+                        <div class="h-2 rounded-full" style="width:${s.value}%; background:${s.grade_color}"></div>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1 text-right">${s.value}</p>
+                </div>
+            `;
+        });
+
+        statsModal.classList.remove("hidden");
+    }
+
+    document.getElementById("stats-cancel").onclick = () => {
+        statsModal.classList.add("hidden");
+        pendingFormData = null;
+    };
+
+    document.getElementById("stats-confirm").onclick = () => {
+        if (!pendingFormData) return;
+        statsModal.classList.add("hidden");
+        loadingOverlay.classList.remove("hidden");
+        fetch("{% url 'upload_image' %}", { method: "POST", body: pendingFormData })
+            .then(() => { window.location.href = "{% url 'upload_image' %}"; })
+            .catch(() => { window.location.href = "{% url 'upload_image' %}"; });
+    };
+})();
+</script>
 {% endblock %}

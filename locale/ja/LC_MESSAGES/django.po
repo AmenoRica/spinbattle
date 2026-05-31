@@ -1,0 +1,248 @@
+# Japanese translations for SpinBattle
+msgid ""
+msgstr ""
+"Project-Id-Version: SpinBattle 1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-31 09:19+0000\n"
+"PO-Revision-Date: 2026-05-30\n"
+"Last-Translator: SpinBattle\n"
+"Language-Team: Japanese\n"
+"Language: ja\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: accounts/forms.py:25 accounts/forms.py:35 templates/accounts/upload.html:14
+#: templates/accounts/upload.html:16
+msgid "팽이 이름"
+msgstr "コマ名"
+
+#: accounts/models.py:40
+msgid "이미지 크기는 5MB 이하이어야 합니다."
+msgstr "画像サイズは5MB以下である必要があります。"
+
+#: accounts/models.py:48 accounts/views.py:89
+#, python-format
+msgid "이미지는 최대 %(count)s개까지 업로드할 수 있습니다."
+msgstr "画像は最大%(count)s個までアップロードできます。"
+
+#: templates/accounts/profile.html:4 templates/accounts/profile.html:8
+#: templates/home.html:11
+msgid "프로필"
+msgstr "プロフィール"
+
+#: templates/accounts/profile.html:30 templates/spin_detail.html:52
+msgid "저장"
+msgstr "保存"
+
+#: templates/accounts/profile.html:35
+msgid "내 팽이"
+msgstr "マイコマ"
+
+#: templates/accounts/profile.html:37 templates/accounts/upload.html:4
+#: templates/base.html:19
+msgid "이미지 업로드"
+msgstr "画像アップロード"
+
+#: templates/accounts/profile.html:48 templates/accounts/upload.html:55
+#: templates/base.html:70 templates/battle_friendly.html:302
+#: templates/user_list.html:36
+msgid "점"
+msgstr "点"
+
+#: templates/accounts/profile.html:49 templates/accounts/upload.html:56
+#: templates/base.html:70 templates/spin_detail.html:63
+#: templates/user_list.html:23 templates/user_list.html:37
+msgid "승"
+msgstr "勝"
+
+#: templates/accounts/profile.html:49 templates/accounts/upload.html:56
+#: templates/base.html:70 templates/spin_detail.html:64
+#: templates/user_list.html:24 templates/user_list.html:37
+msgid "패"
+msgstr "敗"
+
+#: templates/accounts/profile.html:56
+msgid "아직 팽이가 없습니다."
+msgstr "まだコマがありません。"
+
+#: templates/accounts/profile.html:56
+msgid "업로드하기"
+msgstr "アップロード"
+
+#: templates/accounts/register.html:4 templates/accounts/register.html:8
+#: templates/base.html:45 templates/registration/login.html:29
+msgid "회원가입"
+msgstr "新規登録"
+
+#: templates/accounts/register.html:27
+msgid "가입하기"
+msgstr "登録する"
+
+#: templates/accounts/register.html:29
+msgid "이미 계정이 있으신가요?"
+msgstr "すでにアカウントをお持ちですか？"
+
+#: templates/accounts/register.html:29 templates/base.html:44
+#: templates/registration/login.html:4 templates/registration/login.html:8
+#: templates/registration/login.html:27
+msgid "로그인"
+msgstr "ログイン"
+
+#: templates/accounts/upload.html:8
+msgid "팽이 이미지 업로드"
+msgstr "コマ画像アップロード"
+
+#: templates/accounts/upload.html:24
+msgid "이미지 선택"
+msgstr "画像を選択"
+
+#: templates/accounts/upload.html:27
+msgid "이미지를 선택하면 크롭할 수 있습니다."
+msgstr "画像を選択するとトリミングできます。"
+
+#: templates/accounts/upload.html:29
+msgid "크롭 결과 미리보기"
+msgstr "トリミング結果プレビュー"
+
+#: templates/accounts/upload.html:41
+msgid "업로드"
+msgstr "アップロード"
+
+#: templates/accounts/upload.html:44
+msgid "이미지는 최대 3개까지 업로드할 수 있습니다. 삭제 후 추가해주세요."
+msgstr "画像は最大3個までアップロードできます。削除後に追加してください。"
+
+#: templates/accounts/upload.html:60
+msgid "삭제"
+msgstr "削除"
+
+#: templates/accounts/upload.html:71
+msgid "이미지 크롭"
+msgstr "画像トリミング"
+
+#: templates/accounts/upload.html:76 templates/accounts/upload.html:91
+#: templates/base.html:75 templates/spin_detail.html:127
+msgid "취소"
+msgstr "キャンセル"
+
+#: templates/accounts/upload.html:77
+msgid "크롭 적용"
+msgstr "トリミング適用"
+
+#: templates/accounts/upload.html:92
+msgid "확인"
+msgstr "確認"
+
+#: templates/accounts/upload.html:99
+msgid "스탯 계산 중..."
+msgstr "ステータス計算中..."
+
+#: templates/accounts/upload.html:174
+msgid "업로드에 실패했습니다."
+msgstr "アップロードに失敗しました。"
+
+#: templates/base.html:17 templates/user_list.html:4 templates/user_list.html:8
+msgid "유저 목록"
+msgstr "ユーザー一覧"
+
+#: templates/base.html:22 templates/battle_friendly.html:300
+msgid "랭크 대전"
+msgstr "ランク対戦"
+
+#: templates/base.html:41
+msgid "로그아웃"
+msgstr "ログアウト"
+
+#: templates/base.html:62
+msgid "랭크 대전 — 내 팽이를 선택하세요"
+msgstr "ランク対戦 — コマを選んでください"
+
+#: templates/base.html:119 templates/spin_detail.html:107
+msgid "전투 시작에 실패했습니다."
+msgstr "バトル開始に失敗しました。"
+
+#: templates/battle_friendly.html:7 templates/battle_friendly.html:222
+msgid "대전"
+msgstr "対戦"
+
+#: templates/battle_friendly.html:291
+msgid "다시 보기"
+msgstr "もう一度見る"
+
+#: templates/battle_friendly.html:292
+msgid "돌아가기"
+msgstr "戻る"
+
+#: templates/battle_friendly.html:299
+msgid "전투 데이터가 없습니다."
+msgstr "バトルデータがありません。"
+
+#: templates/battle_friendly.html:301 templates/spin_detail.html:96
+msgid "친선 대전"
+msgstr "フレンド対戦"
+
+#: templates/battle_friendly.html:303
+msgid "가속!"
+msgstr "加速!"
+
+#: templates/battle_friendly.html:304
+msgid "인내!"
+msgstr "根性!"
+
+#: templates/battle_friendly.html:305
+msgid "시작!"
+msgstr "スタート!"
+
+#: templates/home.html:9
+msgid "나만의 이미지를 팽이로 만들어 싸워보세요"
+msgstr "自分の画像をコマにして戦おう！"
+
+#: templates/home.html:13
+msgid "시작하기"
+msgstr "始める"
+
+#: templates/registration/login.html:29
+msgid "계정이 없으신가요?"
+msgstr "アカウントをお持ちでないですか？"
+
+#: templates/spin_detail.html:11
+msgid "팽이 이미지"
+msgstr "コマ画像"
+
+#: templates/spin_detail.html:45
+msgid "수정"
+msgstr "編集"
+
+#: templates/spin_detail.html:60 templates/user_list.html:20
+msgid "대전 점수"
+msgstr "対戦スコア"
+
+#: templates/spin_detail.html:67
+#, python-format
+msgid "승률 %(wins)s/%(total)s"
+msgstr "勝率 %(wins)s/%(total)s"
+
+#: templates/spin_detail.html:109
+msgid "내 팽이를 선택하세요"
+msgstr "コマを選んでください"
+
+#: templates/spin_detail.html:118
+#, python-format
+msgid "%(score)s점 / %(wins)s승 %(losses)s패"
+msgstr "%(score)s点 / %(wins)s勝 %(losses)s敗"
+
+#: templates/spin_detail.html:124
+msgid "다른 팽이가 없습니다"
+msgstr "他のコマがありません"
+
+#: templates/user_list.html:44
+msgid "아직 팽이가 없습니다"
+msgstr "まだコマがありません"
+
+#: templates/user_list.html:48
+msgid "유저가 없습니다"
+msgstr "ユーザーがいません"
+
+#~ msgid "반갑습니다"
+#~ msgstr "ようこそ"

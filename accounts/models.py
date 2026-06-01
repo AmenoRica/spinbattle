@@ -17,7 +17,7 @@ class CustomUser(AbstractUser):
 
 
 class SpinImage(models.Model):
-    MAX_PER_USER = 3
+    MAX_PER_USER = 5
     MAX_SIZE_BYTES = 5 * 1024 * 1024
 
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name="spin_images")

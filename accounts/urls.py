@@ -4,9 +4,8 @@ from . import views
 
 urlpatterns = [
     path("signup/", views.register, name="signup"),
-    path("profile/", views.profile, name="profile"),
-    path("upload/", views.upload_image, name="upload_image"),
-    path("upload/preview/", views.upload_preview, name="upload_preview"),
+    path("my-spins/", views.my_spins, name="my_spins"),
+    path("my-spins/preview/", views.upload_preview, name="upload_preview"),
     path("images/<int:pk>/delete/", views.delete_image, name="delete_image"),
     path("images/<int:pk>/rename/", views.rename_image, name="rename_image"),
     path("users/", views.user_list, name="user_list"),

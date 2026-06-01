@@ -1,15 +1,41 @@
 {% extends "base.html" %}
 {% load i18n static %}
 
-{% block title %}{% trans "이미지 업로드" %} - SpinBattle{% endblock %}
+{% block title %}{% trans "내 팽이" %} - SpinBattle{% endblock %}
 
 {% block content %}
 <div class="max-w-2xl mx-auto px-4 py-16">
-    <h1 class="text-3xl font-bold text-center mb-8">{% trans "팽이 이미지 업로드" %}</h1>
+    <h1 class="text-3xl font-bold text-center mb-8">{% trans "내 팽이" %}</h1>
+
+    <form method="post" class="bg-gray-800 rounded-lg p-6 space-y-4 mb-8">
+        {% csrf_token %}
+        <input type="hidden" name="form_type" value="profile">
+        {% for field in profile_form %}
+        {% if field.name != 'password' %}
+        <div>
+            <label for="{{ field.id_for_label }}" class="block text-sm text-gray-400 mb-1">{{ field.label }}</label>
+            {% if field.field.widget.input_type == 'textarea' %}
+                <textarea name="{{ field.html_name }}" id="{{ field.id_for_label }}" rows="3"
+                          class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:outline-none focus:border-indigo-500">{{ field.value|default:'' }}</textarea>
+            {% else %}
+                <input type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+                       value="{{ field.value|default:'' }}"
+                       class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:outline-none focus:border-indigo-500"
+                       {% if field.field.required %}required{% endif %}>
+            {% endif %}
+            {% for error in field.errors %}
+                <p class="text-red-400 text-sm mt-1">{{ error }}</p>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endfor %}
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition">{% trans "프로필 저장" %}</button>
+    </form>
 
     {% if spin_images.count < 3 %}
     <form id="upload-form" method="post" enctype="multipart/form-data" class="bg-gray-800 rounded-lg p-6 mb-8">
         {% csrf_token %}
+        <input type="hidden" name="form_type" value="upload">
         <div class="mb-4">
             <label for="{{ form.name.id_for_label }}" class="block text-sm text-gray-400 mb-1">{% trans "팽이 이름" %}</label>
             <input type="text" name="{{ form.name.html_name }}" id="{{ form.name.id_for_label }}" maxlength="30"
@@ -41,7 +67,7 @@
         <button type="submit" id="submit-btn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition">{% trans "업로드" %}</button>
     </form>
     {% else %}
-    <p class="text-center text-gray-400 mb-8">{% trans "이미지는 최대 3개까지 업로드할 수 있습니다. 삭제 후 추가해주세요." %}</p>
+    <p class="text-center text-gray-400 mb-8">{% trans "이미지는 최대 5개까지 업로드할 수 있습니다. 삭제 후 추가해주세요." %}</p>
     {% endif %}
 
     {% if spin_images %}
@@ -214,9 +240,9 @@
         if (!pendingFormData) return;
         statsModal.classList.add("hidden");
         loadingOverlay.classList.remove("hidden");
-        fetch("{% url 'upload_image' %}", { method: "POST", body: pendingFormData })
-            .then(() => { window.location.href = "{% url 'upload_image' %}"; })
-            .catch(() => { window.location.href = "{% url 'upload_image' %}"; });
+        fetch("{% url 'my_spins' %}", { method: "POST", body: pendingFormData })
+            .then(() => { window.location.href = "{% url 'my_spins' %}"; })
+            .catch(() => { window.location.href = "{% url 'my_spins' %}"; });
     };
 })();
 </script>

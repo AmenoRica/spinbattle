@@ -62,11 +62,9 @@
                     <div class="flex gap-3 justify-end mt-1 text-sm">
                         <span class="text-green-400">{{ spin_image.wins }}{% trans "승" %}</span>
                         <span class="text-red-400">{{ spin_image.losses }}{% trans "패" %}</span>
-                        {% with total_battles=spin_image.wins|add:spin_image.losses %}
                         <span class="text-gray-400">
-                            {% if total_battles > 0 %}{% blocktrans with wins=spin_image.wins total=total_battles %}승률 {{ wins }}/{{ total }}{% endblocktrans %}{% else %}-{% endif %}
+                            {% if winrate is not None %}{% blocktrans with winrate=winrate %}승률 {{ winrate }}%{% endblocktrans %}{% else %}-{% endif %}
                         </span>
-                        {% endwith %}
                     </div>
                 </div>
             </div>

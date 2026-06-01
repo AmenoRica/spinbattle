@@ -5,7 +5,7 @@ import random
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.db.models import Prefetch, Sum
+from django.db.models import Count, Prefetch, Sum
 from django.db.models.functions import Coalesce
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -49,16 +49,45 @@ def register(request):
 
 
 @login_required
-def profile(request):
+def my_spins(request):
+    profile_form = CustomUserChangeForm(instance=request.user)
+    upload_form = SpinImageForm()
+    spin_images = request.user.spin_images.order_by("-battle_score")
+
     if request.method == "POST":
-        form = CustomUserChangeForm(request.POST, instance=request.user)
-        if form.is_valid():
-            form.save()
-            return redirect("profile")
-    else:
-        form = CustomUserChangeForm(instance=request.user)
-    spin_images = request.user.spin_images.all()
-    return render(request, "accounts/profile.html", {"form": form, "spin_images": spin_images})
+        form_type = request.POST.get("form_type")
+
+        if form_type == "profile":
+            profile_form = CustomUserChangeForm(request.POST, instance=request.user)
+            if profile_form.is_valid():
+                profile_form.save()
+                return redirect("my_spins")
+
+        elif form_type == "upload":
+            upload_form = SpinImageForm(request.POST, request.FILES)
+            if upload_form.is_valid():
+                spin_image = upload_form.save(commit=False)
+                spin_image.user = request.user
+                try:
+                    spin_image.full_clean()
+                except ValidationError as e:
+                    for field, errors in e.message_dict.items():
+                        for error in errors:
+                            upload_form.add_error(field, error)
+                    return render(request, "accounts/my_spins.html", {"profile_form": profile_form, "form": upload_form, "spin_images": spin_images})
+
+                if spin_image.image:
+                    spin_image.image.seek(0)
+                    file_hash = hashlib.sha256(spin_image.image.read()).hexdigest()
+                    spin_image.image.seek(0)
+                    if SpinImage.objects.filter(hash=file_hash).exists():
+                        upload_form.add_error("image", _("이미 같은 이미지를 업로드한 유저가 있습니다!"))
+                        return render(request, "accounts/my_spins.html", {"profile_form": profile_form, "form": upload_form, "spin_images": spin_images})
+
+                spin_image.save()
+                return redirect("my_spins")
+
+    return render(request, "accounts/my_spins.html", {"profile_form": profile_form, "form": upload_form, "spin_images": spin_images})
 
 
 @login_required
@@ -124,42 +153,11 @@ def upload_preview(request):
 
 
 @login_required
-def upload_image(request):
-    if request.method == "POST":
-        form = SpinImageForm(request.POST, request.FILES)
-        if form.is_valid():
-            spin_image = form.save(commit=False)
-            spin_image.user = request.user
-            try:
-                spin_image.full_clean()
-            except ValidationError as e:
-                for field, errors in e.message_dict.items():
-                    for error in errors:
-                        form.add_error(field, error)
-                return render(request, "accounts/upload.html", {"form": form, "spin_images": request.user.spin_images.all()})
-
-            if spin_image.image:
-                spin_image.image.seek(0)
-                file_hash = hashlib.sha256(spin_image.image.read()).hexdigest()
-                spin_image.image.seek(0)
-                if SpinImage.objects.filter(hash=file_hash).exists():
-                    form.add_error("image", _("이미 같은 이미지를 업로드한 유저가 있습니다!"))
-                    return render(request, "accounts/upload.html", {"form": form, "spin_images": request.user.spin_images.all()})
-
-            spin_image.save()
-            return redirect("upload_image")
-    else:
-        form = SpinImageForm()
-    spin_images = request.user.spin_images.all()
-    return render(request, "accounts/upload.html", {"form": form, "spin_images": spin_images})
-
-
-@login_required
 def delete_image(request, pk):
     spin_image = get_object_or_404(SpinImage, pk=pk, user=request.user)
     if request.method == "POST":
         spin_image.delete()
-    return redirect("upload_image")
+    return redirect("my_spins")
 
 
 @login_required
@@ -179,7 +177,11 @@ def user_list(request):
         total_score=Coalesce(Sum("spin_images__battle_score"), 0),
         total_wins=Coalesce(Sum("spin_images__wins"), 0),
         total_losses=Coalesce(Sum("spin_images__losses"), 0),
-    ).order_by("-total_score")
+        spin_count=Count("spin_images"),
+    )
+    for u in users:
+        u.total_score += (SpinImage.MAX_PER_USER - u.spin_count) * 700
+    users = sorted(users, key=lambda u: u.total_score, reverse=True)
     return render(request, "user_list.html", {"users": users})
 
 
@@ -235,6 +237,9 @@ def spin_detail(request, pk):
     spin_type_info = SPIN_TYPES.get(spin_image.spin_type, {})
     type_name = get_type_name(spin_image.spin_type, lang)
 
+    total_battles = spin_image.wins + spin_image.losses
+    winrate = round(spin_image.wins / total_battles * 100) if total_battles > 0 else None
+
     return render(request, "spin_detail.html", {
         "spin_image": spin_image,
         "stat_detail": stat_detail,
@@ -245,6 +250,7 @@ def spin_detail(request, pk):
         "labels": labels,
         "spin_type_name": type_name,
         "spin_type_color": spin_type_info.get("color", "#888"),
+        "winrate": winrate,
     })
 
 

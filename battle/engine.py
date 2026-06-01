@@ -9,20 +9,22 @@ from .weather import WEATHER_STAT_MODS, WEATHER_CRIT_BONUS, WEATHER_EVENTS
 
 ACCEL_BASE_CHANCE = 0.15
 ACCEL_LUCK_SCALE = 0.55
-ACCEL_AMOUNT_FACTOR = 5.0
+ACCEL_AMOUNT_FACTOR = 6.0
 
-BASE_DAMAGE_DIVISOR = 500.0
-DEFENSE_HALF = 100.0
+BASE_DAMAGE_ATTACK_SCALE = 0.18
+BASE_DAMAGE_SPEED_SCALE = 0.02
+DEFENSE_HALF = 35.0
+DEFENSE_DECEL_FACTOR = 0.008
 
 CRIT_BASE_CHANCE = 0.05
-CRIT_LUCK_SCALE = 0.30
+CRIT_LUCK_SCALE = 0.15
 CRIT_BASE_MULTIPLIER = 1.5
-CRIT_ACCEL_SCALE = 1 / 200.0
+CRIT_ACCEL_SCALE = 0.01
 
-SPEED_PRIORITY_LUCK_RATIO = 0.5
+SPEED_PRIORITY_LUCK_RATIO = 0.3
 
-BASE_DECEL = 3.0
-DECEL_STAMINA_SCALE = 100.0
+BASE_DECEL = 4.0
+DECEL_STAMINA_SCALE = 80.0
 DECEL_TURN_GROWTH = 0.08
 
 MAX_TURNS = 25
@@ -169,10 +171,11 @@ def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=No
     stats_b = compute_stats(hash_b)
 
     def make_spin(stats, name, spin_type):
+        initial_speed = float(stats["speed"]) + float(stats["defense"]) * 0.4
         return {
             "name": name,
-            "speed": float(stats["speed"]),
-            "max_speed": float(stats["speed"]) * 2,
+            "speed": initial_speed,
+            "max_speed": initial_speed * 2,
             "attack": stats["attack"],
             "defense": stats["defense"],
             "stamina": stats["stamina"],
@@ -311,8 +314,8 @@ def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=No
 
         log_entries.append({"text": "", "effects": []})
 
-        prio_a = a["speed"] + rng.uniform(-a["luck"] * SPEED_PRIORITY_LUCK_RATIO, a["luck"] * SPEED_PRIORITY_LUCK_RATIO)
-        prio_b = b["speed"] + rng.uniform(-b["luck"] * SPEED_PRIORITY_LUCK_RATIO, b["luck"] * SPEED_PRIORITY_LUCK_RATIO)
+        prio_a = a["speed"] * 0.6 + a["attack"] * 0.25 + a["defense"] * 0.15 + rng.uniform(-a["luck"] * SPEED_PRIORITY_LUCK_RATIO, a["luck"] * SPEED_PRIORITY_LUCK_RATIO)
+        prio_b = b["speed"] * 0.6 + b["attack"] * 0.25 + b["defense"] * 0.15 + rng.uniform(-b["luck"] * SPEED_PRIORITY_LUCK_RATIO, b["luck"] * SPEED_PRIORITY_LUCK_RATIO)
 
         if prio_a >= prio_b:
             first, second, first_side, second_side = a, b, "a", "b"
@@ -325,7 +328,7 @@ def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=No
             atk = max(attacker["attack"] + attacker["attack_mod"], 1)
             def_val = max(defender["defense"] + defender["defense_mod"], 0)
 
-            base_damage = (attacker["speed"] * atk) / BASE_DAMAGE_DIVISOR
+            base_damage = atk * BASE_DAMAGE_ATTACK_SCALE + attacker["speed"] * BASE_DAMAGE_SPEED_SCALE
 
             is_crit = rng.random() < (CRIT_BASE_CHANCE + CRIT_LUCK_SCALE * (attacker["luck"] / 100) + weather_crit_bonus)
             multiplier = 1.0
@@ -336,7 +339,7 @@ def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=No
             type_mult = get_type_multiplier(attacker.get("spin_type"), defender.get("spin_type"))
 
             reduction = def_val / (def_val + DEFENSE_HALF)
-            final_damage = base_damage * (1 - reduction) * type_mult
+            final_damage = max(base_damage * (1 - reduction), 0.5) * type_mult
             final_damage = max(final_damage, 0)
 
             old_speed = defender["speed"]
@@ -496,8 +499,8 @@ def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=No
 
         old_a = a["speed"]
         old_b = b["speed"]
-        decel_a = BASE_DECEL * (DECEL_STAMINA_SCALE / a["stamina"]) * growth * a.get("decel_mult", 1.0)
-        decel_b = BASE_DECEL * (DECEL_STAMINA_SCALE / b["stamina"]) * growth * b.get("decel_mult", 1.0)
+        decel_a = BASE_DECEL * (DECEL_STAMINA_SCALE / a["stamina"]) * growth * a.get("decel_mult", 1.0) * max(1.0 - a["defense"] * DEFENSE_DECEL_FACTOR, 0.3)
+        decel_b = BASE_DECEL * (DECEL_STAMINA_SCALE / b["stamina"]) * growth * b.get("decel_mult", 1.0) * max(1.0 - b["defense"] * DEFENSE_DECEL_FACTOR, 0.3)
         a["speed"] = max(a["speed"] - decel_a, 0)
         b["speed"] = max(b["speed"] - decel_b, 0)
 

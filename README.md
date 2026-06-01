@@ -260,6 +260,33 @@ python manage.py migrate_media_to_r2
 
 ---
 
+## Render 배포
+
+### 빠른 배포 순서
+
+1. GitHub에 이 저장소를 푸시합니다.
+2. Render에서 **New +** → **Blueprint** 선택 후 저장소를 연결합니다.
+3. 루트의 `render.yaml`을 인식하면 웹서비스가 자동 생성됩니다.
+4. 배포 후 `https://<서비스명>.onrender.com`으로 접속해 확인합니다.
+
+### 환경 변수
+
+- `SECRET_KEY`: Render에서 자동 생성
+- `DEBUG=False`: `render.yaml`에 기본 설정
+- `ALLOWED_HOSTS=.onrender.com`: `render.yaml`에 기본 설정
+- `CSRF_TRUSTED_ORIGINS=https://*.onrender.com`: `render.yaml`에 기본 설정
+- `DATABASE_URL`: Postgres 연결 시 Render가 제공한 값을 사용
+
+### 이미지 업로드(미디어) 운영 권장
+
+Render 무료 웹서비스 파일시스템은 영구 저장소가 아니므로, 업로드 파일은 R2 사용을 권장합니다.
+
+- `USE_R2_STORAGE=True`
+- `R2_ACCOUNT_ID`, `R2_BUCKET_NAME`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`
+- 필요 시 `R2_ENDPOINT_URL`, `R2_PUBLIC_URL`
+
+---
+
 ## 라이선스
 
 과제용 프로젝트입니다.

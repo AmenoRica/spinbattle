@@ -170,10 +170,14 @@ function startBattle(mySpinPk) {
             'Content-Type': 'application/x-www-form-urlencoded',
             'X-CSRFToken': csrftoken,
         },
-        body: `my_spin=${mySpinPk}&opponent_spin=${opponentPk}`,
+        body,
     })
     .then(resp => resp.json())
     .then(data => {
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
         localStorage.setItem('battle_data', JSON.stringify(data));
         window.location.href = '{% url "battle_friendly" %}';
     })

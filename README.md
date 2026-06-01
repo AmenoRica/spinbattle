@@ -51,6 +51,8 @@ spinbattle/
 └── docs/diary/                 # 개발 일지
 ```
 
+![SpinBattle 프로젝트 구조 다이어그램](docs/spinbattle-project-structure.png)
+
 ---
 
 ## 설치 & 실행

@@ -27,7 +27,7 @@ BASE_DECEL = 4.0
 DECEL_STAMINA_SCALE = 80.0
 DECEL_TURN_GROWTH = 0.08
 
-MAX_TURNS = 25
+MAX_TURNS = 35
 
 EVENT_BASE_CHANCE = 0.05
 EVENT_LUCK_SCALE = 0.0025
@@ -501,6 +501,12 @@ def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=No
         old_b = b["speed"]
         decel_a = BASE_DECEL * (DECEL_STAMINA_SCALE / a["stamina"]) * growth * a.get("decel_mult", 1.0) * max(1.0 - a["defense"] * DEFENSE_DECEL_FACTOR, 0.3)
         decel_b = BASE_DECEL * (DECEL_STAMINA_SCALE / b["stamina"]) * growth * b.get("decel_mult", 1.0) * max(1.0 - b["defense"] * DEFENSE_DECEL_FACTOR, 0.3)
+        if turn >= 26:
+            decel_a *= 2
+            decel_b *= 2
+        if turn >= 31:
+            decel_a *= 2
+            decel_b *= 2
         a["speed"] = max(a["speed"] - decel_a, 0)
         b["speed"] = max(b["speed"] - decel_b, 0)
 

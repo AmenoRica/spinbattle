@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "랭킹" %} - SpinBattle{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 py-16">
+    <h1 class="text-3xl font-bold text-center mb-8">{% trans "랭킹" %}</h1>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="border-b border-gray-700 text-gray-400 text-sm">
+                    <th class="py-3 px-2">#</th>
+                    <th class="py-3 px-2"></th>
+                    <th class="py-3 px-2">{% trans "이름" %}</th>
+                    <th class="py-3 px-2">{% trans "소유자" %}</th>
+                    <th class="py-3 px-2 text-center">{% trans "타입" %}</th>
+                    <th class="py-3 px-2 text-center">SPD</th>
+                    <th class="py-3 px-2 text-center">ACC</th>
+                    <th class="py-3 px-2 text-center">LCK</th>
+                    <th class="py-3 px-2 text-center">STA</th>
+                    <th class="py-3 px-2 text-center">ATK</th>
+                    <th class="py-3 px-2 text-center">DEF</th>
+                    <th class="py-3 px-2 text-right">{% trans "레이팅" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in spin_data %}
+                <tr class="border-b border-gray-800 hover:bg-gray-800/50 transition">
+                    <td class="py-3 px-2 text-gray-500 font-mono">{{ forloop.counter }}</td>
+                    <td class="py-3 px-2">
+                        <a href="{% url 'spin_detail' entry.spin.pk %}">
+                            <img src="{{ entry.spin.image.url }}" alt="{{ entry.spin.name }}" class="w-10 h-10 object-cover rounded">
+                        </a>
+                    </td>
+                    <td class="py-3 px-2">
+                        <a href="{% url 'spin_detail' entry.spin.pk %}" class="font-bold text-gray-200 hover:text-indigo-400 transition">{{ entry.spin.name }}</a>
+                    </td>
+                    <td class="py-3 px-2 text-gray-400">{{ entry.spin.user.username }}</td>
+                    <td class="py-3 px-2 text-center">
+                        <span class="text-xs font-bold px-1.5 py-0.5 rounded-full border" style="color:{{ entry.type_color }}; border-color:{{ entry.type_color }}; background:{{ entry.type_color }}15">{{ entry.type_name }}</span>
+                    </td>
+                    {% for key, grade, color in entry.grades %}
+                    <td class="py-3 px-2 text-center font-bold" style="color:{{ color }}">{{ grade }}</td>
+                    {% endfor %}
+                    <td class="py-3 px-2 text-right">
+                        <span class="font-bold {% if entry.spin.battle_score >= 1000 %}text-indigo-400{% else %}text-red-400{% endif %}">{{ entry.spin.battle_score }}</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="11" class="py-8 text-center text-gray-500">{% trans "아직 팽이가 없습니다" %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

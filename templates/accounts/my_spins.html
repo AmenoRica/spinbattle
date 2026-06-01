@@ -32,7 +32,7 @@
         <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition">{% trans "프로필 저장" %}</button>
     </form>
 
-    {% if spin_images.count < 3 %}
+    {% if spin_images.count < 5 %}
     <form id="upload-form" method="post" enctype="multipart/form-data" class="bg-gray-800 rounded-lg p-6 mb-8">
         {% csrf_token %}
         <input type="hidden" name="form_type" value="upload">
@@ -241,9 +241,53 @@
         statsModal.classList.add("hidden");
         loadingOverlay.classList.remove("hidden");
         fetch("{% url 'my_spins' %}", { method: "POST", body: pendingFormData })
-            .then(() => { window.location.href = "{% url 'my_spins' %}"; })
+            .then(resp => resp.json())
+            .then(data => {
+                loadingOverlay.classList.add("hidden");
+                if (data.placement_results) {
+                    showPlacementModal(data.placement_spin_name, data.placement_results);
+                } else {
+                    window.location.href = "{% url 'my_spins' %}";
+                }
+            })
             .catch(() => { window.location.href = "{% url 'my_spins' %}"; });
     };
+
+    function showPlacementModal(spinName, results) {
+        const rows = results.map(r => {
+            const resultText = r.result === "win" ? "{% trans '승' %}" : r.result === "loss" ? "{% trans '패' %}" : "{% trans '무' %}";
+            const resultClass = r.result === "win" ? "text-green-400" : r.result === "loss" ? "text-red-400" : "text-yellow-400";
+            const scoreClass = r.new_score >= r.old_score ? "text-green-400" : "text-red-400";
+            return `<div class="flex items-center justify-between bg-gray-700/50 rounded px-3 py-2">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500 font-mono w-6">#${r.round}</span>
+                    <span class="text-sm text-gray-200">${r.opp_name}</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-xs font-bold ${resultClass}">${resultText}</span>
+                    <span class="text-xs font-mono ${scoreClass}">${r.old_score} → ${r.new_score}</span>
+                </div>
+            </div>`;
+        }).join("");
+
+        const lastScore = results[results.length - 1].new_score;
+        const scoreClass = lastScore >= 1000 ? "text-indigo-400" : "text-red-400";
+
+        const modal = document.createElement("div");
+        modal.id = "placement-modal";
+        modal.className = "fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4";
+        modal.innerHTML = `<div class="bg-gray-800 rounded-lg max-w-md w-full p-6">
+            <h3 class="text-lg font-bold mb-1">{% trans "배치 매치 완료" %}</h3>
+            <p class="text-sm text-gray-400 mb-4">${spinName} — {% trans "10판 배치 결과" %}</p>
+            <div class="space-y-2 mb-4 max-h-[50vh] overflow-y-auto">${rows}</div>
+            <div class="text-center border-t border-gray-700 pt-3 mb-3">
+                <span class="text-sm text-gray-400">{% trans "최종 레이팅" %}</span>
+                <span class="text-xl font-bold ${scoreClass}">${lastScore}</span>
+            </div>
+            <button type="button" onclick="document.getElementById('placement-modal').remove(); window.location.href='{% url 'my_spins' %}';" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition">{% trans "확인" %}</button>
+        </div>`;
+        document.body.appendChild(modal);
+    }
 })();
 </script>
 {% endblock %}

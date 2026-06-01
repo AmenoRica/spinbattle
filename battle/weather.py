@@ -21,7 +21,7 @@ WEATHER_TYPES = {
         "icon_class": "weather-snow",
     },
     "normal": {
-        "name_ko": "일반",
+        "name_ko": "평범",
         "name_ja": "普通",
         "name_en": "Normal",
         "icon_ko": "⛅",

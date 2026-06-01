@@ -3,7 +3,7 @@ const BattleReplay = (() => {
     let currentIndex = 0;
     let timer = null;
     let playing = false;
-    let speed = 1;
+    let speed = 5;
     let battleWeather = null;
     let battleCity = null;
     let battleWeatherName = null;
@@ -11,7 +11,8 @@ const BattleReplay = (() => {
     const BASE_INTERVAL = 600;
 
     function getInterval() {
-        return BASE_INTERVAL / speed;
+        const turnBoost = Math.min(currentIndex / 80, 2);
+        return (BASE_INTERVAL / speed) / (1 + turnBoost);
     }
 
     function getLogEl() {
@@ -305,7 +306,7 @@ const BattleReplay = (() => {
         init(data) {
             logData = data.log || data;
             currentIndex = 0;
-            speed = 1;
+            speed = 5;
             battleWeather = data.weather || null;
             battleCity = data.city || null;
             battleWeatherName = data.weather_name || null;

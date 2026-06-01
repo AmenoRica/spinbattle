@@ -105,6 +105,15 @@
 <div id="battle-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4" data-error-msg="{% trans '전투 시작에 실패했습니다.' %}">
     <div class="bg-gray-800 rounded-lg max-w-md w-full p-6">
         <h3 class="text-lg font-bold mb-4">{% trans "내 팽이를 선택하세요" %}</h3>
+        <div class="mb-4">
+            <label for="city-select" class="block text-sm text-gray-400 mb-1">{% trans "도시 선택" %}</label>
+            <select id="city-select" class="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-gray-100 focus:outline-none focus:border-indigo-500">
+                <option value="">{% trans "랜덤" %}</option>
+                {% for c in cities %}
+                <option value="{{ c.key }}">{{ c.name_ko }}</option>
+                {% endfor %}
+            </select>
+        </div>
         <div class="space-y-3">
             {% for img in user.spin_images.all %}
             {% if img.pk != spin_image.pk %}
@@ -152,6 +161,9 @@ function getCookie(name) {
 function startBattle(mySpinPk) {
     const csrftoken = getCookie('csrftoken');
     const opponentPk = {{ spin_image.pk }};
+    const cityKey = document.getElementById('city-select').value;
+    let body = `my_spin=${mySpinPk}&opponent_spin=${opponentPk}`;
+    if (cityKey) body += `&city=${encodeURIComponent(cityKey)}`;
     fetch('{% url "friendly_battle" %}', {
         method: 'POST',
         headers: {

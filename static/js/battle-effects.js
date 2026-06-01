@@ -36,8 +36,9 @@ const BattleEffects = (() => {
         el.className = "battle-float-text";
         el.textContent = text;
         el.style.color = color;
+        el.style.filter = `drop-shadow(0 0 8px ${color}) drop-shadow(0 0 20px ${color}80)`;
         parent.appendChild(el);
-        setTimeout(() => el.remove(), 1000);
+        setTimeout(() => el.remove(), 1200);
     }
 
     function createSparks(side, color, count) {

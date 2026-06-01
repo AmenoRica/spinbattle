@@ -110,21 +110,24 @@
 
         .battle-float-text {
             position: absolute;
-            top: -10px;
+            top: 50%;
             left: 50%;
-            transform: translateX(-50%);
-            font-weight: bold;
-            font-size: 22px;
-            animation: floatUp 1s ease-out forwards;
+            transform: translate(-50%, -50%);
+            font-weight: 900;
+            font-size: 64px;
+            animation: floatUp 1.2s ease-out forwards;
             pointer-events: none;
             z-index: 50;
             white-space: nowrap;
-            text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+            text-shadow: 0 0 10px rgba(0,0,0,1), 0 0 20px rgba(0,0,0,0.8), 0 2px 6px rgba(0,0,0,0.9);
+            -webkit-text-stroke: 1px rgba(0,0,0,0.6);
         }
         @keyframes floatUp {
-            0% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
-            50% { opacity: 1; transform: translateX(-50%) translateY(-25px) scale(1.2); }
-            100% { opacity: 0; transform: translateX(-50%) translateY(-55px) scale(0.9); }
+            0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
+            15% { opacity: 1; transform: translate(-50%, -50%) scale(1.4); }
+            30% { opacity: 1; transform: translate(-50%, -60%) scale(1.1); }
+            60% { opacity: 1; transform: translate(-50%, -80%) scale(1.0); }
+            100% { opacity: 0; transform: translate(-50%, -120%) scale(0.8); }
         }
 
         .battle-spark {
@@ -360,10 +363,11 @@
                     <button id="btn-skip" class="px-2 py-1 text-sm bg-gray-700 text-gray-300 rounded hover:bg-gray-600 transition">▶▶</button>
                 </div>
                 <div class="flex items-center gap-1">
-                    <button class="btn-speed px-2 py-1 text-xs rounded bg-gray-700 text-gray-400 transition" data-speed="0.5">0.5x</button>
-                    <button class="btn-speed px-2 py-1 text-xs rounded bg-indigo-600 text-white transition" data-speed="1">1x</button>
-                    <button class="btn-speed px-2 py-1 text-xs rounded bg-gray-700 text-gray-400 transition" data-speed="2">2x</button>
+                    <button class="btn-speed px-2 py-1 text-xs rounded bg-gray-700 text-gray-400 transition" data-speed="1">1x</button>
                     <button class="btn-speed px-2 py-1 text-xs rounded bg-gray-700 text-gray-400 transition" data-speed="3">3x</button>
+                    <button class="btn-speed px-2 py-1 text-xs rounded bg-indigo-600 text-white transition" data-speed="5">5x</button>
+                    <button class="btn-speed px-2 py-1 text-xs rounded bg-gray-700 text-gray-400 transition" data-speed="10">10x</button>
+                    <button class="btn-speed px-2 py-1 text-xs rounded bg-gray-700 text-gray-400 transition" data-speed="15">15x</button>
                 </div>
             </div>
             <div id="end-controls" class="hidden flex items-center justify-center gap-4 mt-3 pt-3 border-t border-gray-700">
@@ -387,7 +391,7 @@
     };
     </script>
     <script src="{% static 'js/battle-sound.js' %}?v=6"></script>
-    <script src="{% static 'js/battle-effects.js' %}?v=6"></script>
-    <script src="{% static 'js/battle.js' %}?v=6"></script>
+    <script src="{% static 'js/battle-effects.js' %}?v=7"></script>
+    <script src="{% static 'js/battle.js' %}?v=9"></script>
 </body>
 </html>

@@ -22,27 +22,36 @@ spinbattle/
 │   ├── urls.py                   # Root URL routing
 │   ├── wsgi.py / asgi.py
 │
+├── weather/                    # Weather API (pure Python, no Django dependency)
+│   ├── api.py                  # Open-Meteo integration (30-min cache)
+│   └── cities.py               # 20 cities list
+│
 ├── accounts/                     # ONLY Django app — users + spin images
-│   ├── models.py                 # CustomUser (AbstractUser + bio), SpinImage
+│   ├── models.py                 # CustomUser (AbstractUser + bio + is_hidden), SpinImage
 │   ├── views.py                  # All views (function-based)
-│   ├── forms.py                  # 4 forms: creation, change, upload, rename
-│   ├── admin.py                  # CustomUserAdmin
+│   ├── forms.py                  # 5 forms: creation, change, upload, rename, bulk upload
+│   ├── admin.py                  # CustomUserAdmin + SpinImageAdmin + bulk upload action
 │   ├── urls.py                   # All app URL patterns
-│   └── migrations/               # 6 migrations to date
+│   └── migrations/               # 8 migrations to date
 │
 ├── battle/                       # Pure Python package — NOT a Django app
 │   ├── engine.py                 # simulate() → list[dict] with text + effects
 │   ├── rating.py                 # ELO rating: compute_new_ratings(), expected_score()
 │   ├── stats.py                  # compute_stats(hash) → 6 stats, grades, colors
-│   └── types.py                  # 10 types, type advantages, image→type analysis
+│   ├── types.py                  # 10 types, type advantages, image→type analysis
+│   ├── weather.py                # Weather type/effect constants
+│   ├── messages.py                # Battle messages (3 languages)
+│   ├── events.py                 # Random event data
+│   └── josa.py                   # Korean particle helper
 │
 ├── templates/                    # Project-level templates directory
 │   ├── base.html                 # Master layout (nav, footer, Tailwind CDN)
 │   ├── home.html
 │   ├── user_list.html
-│   ├── spin_detail.html          # Hex stat radar + battle modal
+│   ├── ranking.html              # All spins ranked by battle_score
+│   ├── spin_detail.html          # Hex stat radar + battle modal + city select
 │   ├── battle_friendly.html      # STANDALONE — does NOT extend base.html
-│   ├── accounts/                 # register, profile, upload
+│   ├── accounts/                 # my_spins (profile + upload + spin list)
 │   └── registration/             # login (Django auth)
 │
 ├── static/js/                    # Vanilla JS (IIFE module pattern)
@@ -72,7 +81,7 @@ spinbattle/
 
 ### CustomUser (accounts/models.py)
 - Extends `AbstractUser`
-- Extra field: `bio` (TextField, blank=True)
+- Extra fields: `bio` (TextField, blank=True), `is_hidden` (BooleanField, default=False)
 
 ### SpinImage (accounts/models.py)
 - `user` → FK to CustomUser (related_name=`spin_images`)
@@ -82,7 +91,7 @@ spinbattle/
 - `spin_type` → CharField(10, editable=False) — auto-computed from image color analysis
 - `wins`, `losses` → PositiveIntegerField(default=0) — updated by ranked battles
 - `battle_score` → IntegerField(default=1000) — ELO rating, updated by ranked battles
-- Constants: `MAX_PER_USER = 3`, `MAX_SIZE_BYTES = 5MB`
+- Constants: `MAX_PER_USER = 5`, `MAX_SIZE_BYTES = 5MB`
 - `save()` auto-computes `hash` and `spin_type` if not set
 - `clean()` validates image size and per-user count limit
 
@@ -115,19 +124,24 @@ spinbattle/
 
 **Turn order:**
 1. Acceleration event (luck-scaled probability)
-2. Speed priority check (speed ± luck randomness)
+2. Speed priority check: `speed × 0.6 + attack × 0.25 + defense × 0.15 ± luck × 0.3`
 3. Attack phase (first striker → counter-attack if alive)
 4. Speed ≤ 0 check
 5. Random events (positive/negative, luck-weighted)
-6. End-of-turn deceleration (stamina-scaled, growing with turn number)
+6. Weather events (rain influx, snowstorm)
+7. End-of-turn deceleration (stamina-scaled, growing with turn number, defense reduces)
 
 **Damage formula:**
 ```
-base_damage = (speed * attack) / 500.0
-* crit_multiplier (1.5 + acceleration/200, if crit)
-* type_multiplier (1.2 / 0.833 / 1.0)
-defense_reduction = defense / (defense + 100)
-final_damage = base_damage * (1 - defense_reduction)
+base_damage = attack × 0.18 + speed × 0.02
+initial_speed = speed + defense × 0.4
+defense_reduction = defense / (defense + 35)
+priority = speed × 0.6 + attack × 0.25 + defense × 0.15 ± luck × 0.3
+decel = 4.0 × (80 / stamina) × growth × defense_factor
+defense_factor = max(1 - defense × 0.008, 0.3)
+growth = 1 + (turn - 1) × 0.08
+Turns 26-30: decel × 2; Turns 31+: decel × 4 (cumulative: ×2 then ×2)
+Max turns: 35
 ```
 
 **All balance constants** are at the top of `engine.py` with comments — easy to tune.
@@ -144,14 +158,15 @@ final_damage = base_damage * (1 - defense_reduction)
 | `/accounts/signup/` | `signup` | Custom registration view |
 | `/accounts/login/` | `login` | Django built-in auth |
 | `/accounts/logout/` | `logout` | Django built-in auth |
-| `/accounts/profile/` | `profile` | Login required |
-| `/accounts/upload/` | `upload_image` | Login required |
+| `/accounts/my-spins/` | `my_spins` | Login required, profile + upload + spin list |
+| `/accounts/my-spins/preview/` | `upload_preview` | POST JSON, stat preview before upload |
 | `/accounts/images/<pk>/delete/` | `delete_image` | POST only, owner only |
 | `/accounts/images/<pk>/rename/` | `rename_image` | POST only, owner only |
-| `/accounts/users/` | `user_list` | Public, sorted by total battle_score |
-| `/accounts/spins/<pk>/` | `spin_detail` | Public, hex radar + battle button |
-| `/accounts/friendly-battle/` | `friendly_battle` | POST, returns JSON |
-| `/accounts/ranked-battle/` | `ranked_battle` | POST, returns JSON, updates ELO |
+| `/accounts/users/` | `user_list` | Public, sorted by total score |
+| `/accounts/ranking/` | `ranking` | Public, all spins ranked by battle_score |
+| `/accounts/spins/<pk>/` | `spin_detail` | Public, hex radar + battle + city select |
+| `/accounts/friendly-battle/` | `friendly_battle` | POST, JSON, supports city param |
+| `/accounts/ranked-battle/` | `ranked_battle` | POST, JSON, updates ELO |
 | `/battle/` | `battle_friendly` | TemplateView, reads localStorage (both modes) |
 | `/admin/` | — | Django admin |
 
@@ -168,15 +183,18 @@ final_damage = base_damage * (1 - defense_reduction)
 ### JavaScript Modules (load order matters)
 1. `battle-sound.js` — `BattleSound` IIFE: Web Audio API, toggle on/off
 2. `battle-effects.js` — `BattleEffects` IIFE: DOM animations (spin speed, sparks, slashes, float text, wobble)
-3. `battle.js` — `BattleReplay` IIFE: playback controller (init/play/pause/skip/restart/setSpeed)
+3. `battle.js` — `BattleReplay` IIFE: playback controller (init/play/pause/skip/restart/setSpeed), auto-acceleration, weather countdown
 
 ### Battle Page Flow
 1. `spin_detail.html`: "친선 대전" or "랭크 대전" button → select spin → POST via fetch → JSON → localStorage → navigate to `/battle/`
 2. `battle_friendly.html`: On DOMContentLoaded, read `localStorage('battle_data')`, init `BattleReplay`
 3. Ranked battles: JSON includes `mode: "ranked"`, `old_score`, `new_score` per spin — shown on battle end
-4. Spin discs rotate via CSS `animation: spin var(--spin-duration) linear infinite` — speed adjusted by changing `--spin-duration`
-4. Stop animation: `wobbleStop` keyframe (wobble → tilt → grayscale)
-5. Log auto-scrolls: `el.scrollTop = el.scrollHeight` after each line
+4. Friendly battles: city selector on `spin_detail.html` modal, POST includes `city` param
+5. Spin discs rotate via CSS `animation: spin var(--spin-duration) linear infinite` — speed adjusted by changing `--spin-duration`
+6. Stop animation: `wobbleStop` keyframe (wobble → tilt → grayscale)
+7. Log auto-scrolls: `el.scrollTop = el.scrollHeight` after each line
+8. Auto-acceleration: replay speed increases as entries progress (1 + currentIndex/80, max 3x)
+9. Default playback speed: 5x; available speeds: 1x, 3x, 5x, 10x, 15x
 
 ---
 
@@ -191,7 +209,8 @@ final_damage = base_damage * (1 - defense_reduction)
 - **No comments in code**: Do not add comments unless explicitly asked.
 - **No tests yet**: `accounts/tests.py` is empty. When adding tests, use Django's `TestCase`.
 - **No REST framework**: Use `JsonResponse` directly for any API endpoints.
-- **Static file cache busting**: When modifying any file in `static/js/` or `static/css/`, you **MUST** increment the version number in the corresponding `{% static %}` tag in the template that references it. For example, if you change `battle.js`, find the `<script src="{% static 'js/battle.js' %}?v=6">` line in `battle_friendly.html` and bump `?v=6` to `?v=7`. This ensures browsers load the new version instead of using a cached copy. Failure to do this will cause bugs where changes appear to not take effect.
+- **Placement matches**: New spins automatically play 10 ranked placement matches (`PLACEMENT_ROUNDS = 10` in `accounts/views.py`). Results shown via JS modal on upload.
+- **Static file cache busting**: When modifying any file in `static/js/` or `static/css/`, you **MUST** increment the version number in the corresponding `{% static %}` tag in the template that references it.
 
 ---
 
@@ -224,12 +243,8 @@ for si in SpinImage.objects.all():
 
 ---
 
-## Known Gaps (as of initial commit)
+## Known Gaps
 
-- `Pillow` missing from `requirements.txt` (used by `battle/types.py`) — **FIXED**
-- `wins`, `losses`, `battle_score` fields exist on SpinImage but are never updated — **FIXED** (ranked battle system)
-- No ranked battle system yet (only friendly battles that don't persist results) — **FIXED**
-- No ELO/rating system — **FIXED** (`battle/rating.py`)
 - No tests
 - No image deletion from filesystem when SpinImage is deleted
 - Media files not served in production (DEBUG only)

@@ -18,7 +18,7 @@ from battle.stats import compute_stats, get_grade, get_grade_color, get_stat_nam
 from battle.types import SPIN_TYPES, compute_type_from_image, get_type_name
 from battle.weather import get_weather_name, get_weather_icon
 
-from weather.cities import random_city
+from weather.cities import random_city, CITIES
 from weather.api import get_weather_for_city
 
 from .forms import CustomUserChangeForm, CustomUserCreationForm, SpinImageForm, SpinImageRenameForm
@@ -34,6 +34,61 @@ def rng_choice(queryset, weights):
         if r <= acc:
             return obj
     return queryset.last()
+
+
+PLACEMENT_ROUNDS = 10
+
+
+def _run_placement(spin_image):
+    candidates = SpinImage.objects.exclude(pk=spin_image.pk)
+    if not candidates.exists():
+        return []
+    candidate_list = list(candidates)
+    results = []
+    for i in range(PLACEMENT_ROUNDS):
+        weights = [1.0 / (1.0 + abs(c.battle_score - spin_image.battle_score) / 200.0) for c in candidate_list]
+        opp = rng_choice(candidate_list, weights)
+        spin_image.refresh_from_db()
+        opp = SpinImage.objects.get(pk=opp.pk)
+
+        rng = random.Random()
+        city = random_city(rng)
+        weather = get_weather_for_city(city)
+        log = simulate(spin_image.hash, opp.hash, rng, spin_image.name, opp.name, spin_image.spin_type, opp.spin_type, lang="ko", weather=weather, city_name="")
+
+        last_effect = None
+        for entry in log:
+            for eff in entry.get("effects", []):
+                if eff.get("type") == "battle_end":
+                    last_effect = eff
+        winner = last_effect.get("winner", "draw") if last_effect else "draw"
+
+        old_a = spin_image.battle_score
+        old_b = opp.battle_score
+
+        win_a, loss_a = (1, 0) if winner == "a" else (0, 1) if winner == "b" else (0, 0)
+        win_b, loss_b = (0, 0) if winner == "a" else (1, 0) if winner == "b" else (0, 0)
+
+        new_a, new_b = compute_new_ratings(old_a, old_b, winner)
+        SpinImage.objects.filter(pk=spin_image.pk).update(
+            wins=spin_image.wins + win_a, losses=spin_image.losses + loss_a, battle_score=new_a
+        )
+        SpinImage.objects.filter(pk=opp.pk).update(
+            wins=opp.wins + win_b, losses=opp.losses + loss_b, battle_score=new_b
+        )
+        spin_image.battle_score = new_a
+        spin_image.wins += win_a
+        spin_image.losses += loss_a
+
+        results.append({
+            "round": i + 1,
+            "opp_name": opp.name,
+            "opp_type": opp.spin_type,
+            "result": "win" if winner == "a" else "loss" if winner == "b" else "draw",
+            "old_score": old_a,
+            "new_score": new_a,
+        })
+    return results
 
 
 def register(request):
@@ -85,7 +140,11 @@ def my_spins(request):
                         return render(request, "accounts/my_spins.html", {"profile_form": profile_form, "form": upload_form, "spin_images": spin_images})
 
                 spin_image.save()
-                return redirect("my_spins")
+                placement_results = _run_placement(spin_image)
+                return JsonResponse({
+                    "placement_spin_name": spin_image.name,
+                    "placement_results": placement_results,
+                })
 
     return render(request, "accounts/my_spins.html", {"profile_form": profile_form, "form": upload_form, "spin_images": spin_images})
 
@@ -185,6 +244,24 @@ def user_list(request):
     return render(request, "user_list.html", {"users": users})
 
 
+def ranking(request):
+    spins = SpinImage.objects.select_related("user").order_by("-battle_score")
+    lang = get_language() or "ko"
+    stat_keys_order = ["speed", "acceleration", "luck", "stamina", "attack", "defense"]
+    spin_data = []
+    for s in spins:
+        stats = compute_stats(s.hash)
+        grades = [(k, get_grade(stats[k]), get_grade_color(get_grade(stats[k]))) for k in stat_keys_order]
+        type_info = SPIN_TYPES.get(s.spin_type, {})
+        spin_data.append({
+            "spin": s,
+            "grades": grades,
+            "type_name": get_type_name(s.spin_type, lang),
+            "type_color": type_info.get("color", "#888"),
+        })
+    return render(request, "ranking.html", {"spin_data": spin_data, "stat_keys": stat_keys_order})
+
+
 def _hex_point(cx, cy, r, i):
     angle = math.radians(-90 + i * 60)
     return (cx + r * math.cos(angle), cy + r * math.sin(angle))
@@ -251,6 +328,7 @@ def spin_detail(request, pk):
         "spin_type_name": type_name,
         "spin_type_color": spin_type_info.get("color", "#888"),
         "winrate": winrate,
+        "cities": CITIES,
     })
 
 
@@ -292,6 +370,7 @@ def _build_battle_json(my_spin, opp_spin, log, mode, lang, old_score_a=None, new
 def friendly_battle(request):
     my_pk = request.POST.get("my_spin")
     opp_pk = request.POST.get("opponent_spin")
+    city_key = request.POST.get("city", "")
     my_spin = get_object_or_404(SpinImage, pk=my_pk, user=request.user)
     opp_spin = get_object_or_404(SpinImage, pk=opp_pk)
 
@@ -300,7 +379,12 @@ def friendly_battle(request):
 
     lang = get_language() or "ko"
     rng = random.Random()
-    city = random_city(rng)
+    if city_key:
+        city = next((c for c in CITIES if c["key"] == city_key), None)
+        if city is None:
+            city = random_city(rng)
+    else:
+        city = random_city(rng)
     weather = get_weather_for_city(city)
     city_name = city.get(f"name_{lang}", city.get("name_ko", ""))
     log = simulate(my_spin.hash, opp_spin.hash, rng, my_spin.name, opp_spin.name, my_spin.spin_type, opp_spin.spin_type, lang=lang, weather=weather, city_name=city_name)

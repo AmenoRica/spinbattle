@@ -212,6 +212,81 @@
                 height: 140px;
             }
         }
+
+        .weather-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        .weather-drop {
+            position: absolute;
+            width: 2px;
+            background: linear-gradient(rgba(147,197,253,0.6), transparent);
+            animation: rainFall linear infinite;
+        }
+        @keyframes rainFall {
+            0% { transform: translateY(-100vh); }
+            100% { transform: translateY(100vh); }
+        }
+
+        .weather-snowflake {
+            position: absolute;
+            color: rgba(255,255,255,0.8);
+            font-size: 14px;
+            animation: snowFall linear infinite;
+        }
+        @keyframes snowFall {
+            0% { transform: translateY(-20px) rotate(0deg); opacity: 0.9; }
+            100% { transform: translateY(100vh) rotate(360deg); opacity: 0.2; }
+        }
+
+        .weather-sun-ray {
+            position: absolute;
+            top: -20%;
+            left: 50%;
+            width: 200%;
+            height: 60%;
+            background: radial-gradient(ellipse at center top, rgba(251,191,36,0.15) 0%, transparent 60%);
+            transform: translateX(-50%);
+            animation: sunPulse 4s ease-in-out infinite;
+        }
+        @keyframes sunPulse {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+
+        #weather-info {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 10px;
+            border-radius: 9999px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        #weather-info.weather-clear {
+            background: rgba(251,191,36,0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(251,191,36,0.3);
+        }
+        #weather-info.weather-rain {
+            background: rgba(96,165,250,0.15);
+            color: #60a5fa;
+            border: 1px solid rgba(96,165,250,0.3);
+        }
+        #weather-info.weather-snow {
+            background: rgba(226,232,240,0.15);
+            color: #e2e8f0;
+            border: 1px solid rgba(226,232,240,0.3);
+        }
+        #weather-info.weather-normal {
+            background: rgba(156,163,175,0.15);
+            color: #9ca3af;
+            border: 1px solid rgba(156,163,175,0.3);
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-gray-100 h-screen overflow-hidden flex flex-col">
@@ -219,6 +294,10 @@
         <div class="max-w-4xl mx-auto flex items-center justify-between">
             <a href="{% url 'home' %}" class="text-xl font-bold text-indigo-400 hover:text-indigo-300">SpinBattle</a>
             <div class="flex items-center gap-3">
+                <div id="weather-info" class="hidden">
+                    <span id="weather-icon"></span>
+                    <span id="weather-city"></span>
+                </div>
                 <span id="battle-mode-label" class="text-gray-400 text-sm">{% trans "대전" %}</span>
                 <button id="btn-sound" class="px-2 py-1 text-sm rounded hover:bg-gray-700 transition">🔇</button>
             </div>
@@ -294,6 +373,8 @@
         </div>
     </main>
 
+    <div id="weather-overlay" class="weather-overlay hidden"></div>
+
     <script>
     window.BattleI18n = {
         noBattleData: "{% trans '전투 데이터가 없습니다.' %}",
@@ -305,8 +386,8 @@
         countdownGo: "{% trans '시작!' %}"
     };
     </script>
-    <script src="{% static 'js/battle-sound.js' %}?v=5"></script>
-    <script src="{% static 'js/battle-effects.js' %}?v=5"></script>
-    <script src="{% static 'js/battle.js' %}?v=5"></script>
+    <script src="{% static 'js/battle-sound.js' %}?v=6"></script>
+    <script src="{% static 'js/battle-effects.js' %}?v=6"></script>
+    <script src="{% static 'js/battle.js' %}?v=6"></script>
 </body>
 </html>

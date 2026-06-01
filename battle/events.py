@@ -1,5 +1,50 @@
 ENDURE_THRESHOLD = 10
 
+WEATHER_EVENT_TEXT = {
+    "ko": {
+        "rain_influx": {
+            "name": "빗물 유입",
+            "message": "🌧️ 빗물이 {name_josa} {name}의 회전에 스며들었다! 속도가 소폭 회복되었다!",
+            "log": "속도 {old} → {new}",
+            "float_text": "빗물 회복!",
+        },
+        "snowstorm": {
+            "name": "눈보라",
+            "message": "❄️ 눈보라가 몰아쳤다! {name_josa} {name}의 회전이 크게 둔해졌다!",
+            "log": "속도 {old} → {new}",
+            "float_text": "눈보라!",
+        },
+    },
+    "ja": {
+        "rain_influx": {
+            "name": "雨水浸入",
+            "message": "🌧️ 雨水が{name_josa}{name}の回転に染み込んだ！速度が少し回復した！",
+            "log": "速度 {old} → {new}",
+            "float_text": "雨水回復!",
+        },
+        "snowstorm": {
+            "name": "ブリザード",
+            "message": "❄️ ブリザードが吹き荒れた！{name_josa}{name}の回転が大きく鈍った！",
+            "log": "速度 {old} → {new}",
+            "float_text": "ブリザード!",
+        },
+    },
+    "en": {
+        "rain_influx": {
+            "name": "Rain Influx",
+            "message": "🌧️ Rainwater seeped into {name}'s rotation! Speed recovered slightly!",
+            "log": "Speed {old} → {new}",
+            "float_text": "Rain Heal!",
+        },
+        "snowstorm": {
+            "name": "Snowstorm",
+            "message": "❄️ A blizzard swept through! {name}'s rotation slowed significantly!",
+            "log": "Speed {old} → {new}",
+            "float_text": "Blizzard!",
+        },
+    },
+}
+
 EVENT_DATA = [
     ("dragon_dance", "speed_recover_pct", 15, 0.15, ("은", "는"), ("は",), ("",)),
     ("sword_dance", "attack_buff", 25, 25, ("은", "는"), ("は",), ("",)),

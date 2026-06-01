@@ -154,12 +154,58 @@ const BattleEffects = (() => {
             disc.classList.add("spin-winner");
             createSparks(winner, "#fbbf24", 16);
         },
+        _weatherInterval: null,
+        _weatherElements: [],
+        startWeatherEffect(type) {
+            this.stopWeatherEffect();
+            const overlay = document.getElementById("weather-overlay");
+            if (!overlay) return;
+            overlay.classList.remove("hidden");
+
+            if (type === "rain") {
+                overlay.innerHTML = "";
+                for (let i = 0; i < 80; i++) {
+                    const drop = document.createElement("div");
+                    drop.className = "weather-drop";
+                    drop.style.left = Math.random() * 100 + "%";
+                    drop.style.height = (15 + Math.random() * 25) + "px";
+                    drop.style.animationDuration = (0.4 + Math.random() * 0.4) + "s";
+                    drop.style.animationDelay = Math.random() * 2 + "s";
+                    overlay.appendChild(drop);
+                }
+            } else if (type === "snow") {
+                overlay.innerHTML = "";
+                for (let i = 0; i < 50; i++) {
+                    const flake = document.createElement("div");
+                    flake.className = "weather-snowflake";
+                    flake.textContent = "❄";
+                    flake.style.left = Math.random() * 100 + "%";
+                    flake.style.fontSize = (8 + Math.random() * 10) + "px";
+                    flake.style.animationDuration = (3 + Math.random() * 4) + "s";
+                    flake.style.animationDelay = Math.random() * 5 + "s";
+                    overlay.appendChild(flake);
+                }
+            } else if (type === "clear") {
+                overlay.innerHTML = "";
+                const ray = document.createElement("div");
+                ray.className = "weather-sun-ray";
+                overlay.appendChild(ray);
+            }
+        },
+        stopWeatherEffect() {
+            const overlay = document.getElementById("weather-overlay");
+            if (overlay) {
+                overlay.innerHTML = "";
+                overlay.classList.add("hidden");
+            }
+        },
         reset() {
             ["a", "b"].forEach((side) => {
                 const disc = getDisc(side);
                 if (!disc) return;
                 disc.classList.remove("stopped", "spin-winner", "spin-endure-aura", "spin-accel-glow", "spin-attack-lunge", "spin-hit-wobble", "spin-crit-hit");
             });
+            this.stopWeatherEffect();
         },
     };
 })();

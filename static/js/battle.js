@@ -4,6 +4,10 @@ const BattleReplay = (() => {
     let timer = null;
     let playing = false;
     let speed = 1;
+    let battleWeather = null;
+    let battleCity = null;
+    let battleWeatherName = null;
+    let battleWeatherIcon = null;
     const BASE_INTERVAL = 600;
 
     function getInterval() {
@@ -79,6 +83,25 @@ const BattleReplay = (() => {
                 case "event_negative":
                     BattleEffects.eventNegative(fx.target, fx.float_text);
                     BattleSound.eventNegative();
+                    break;
+                case "weather_announce":
+                    BattleEffects.startWeatherEffect(fx.weather);
+                    break;
+                case "weather_effect":
+                    if (fx.stat === "attack" || fx.stat === "defense" || fx.stat === "luck" || fx.stat === "crit") {
+                        BattleEffects.eventPositive(fx.target, "↑");
+                    } else if (fx.stat === "decel") {
+                        BattleEffects.eventNegative(fx.target, "↓");
+                    } else if (fx.stat === "speed_recover") {
+                        BattleEffects.eventPositive(fx.target, "↑");
+                    }
+                    break;
+                case "weather_event":
+                    if (fx.event_name === "rain_influx") {
+                        BattleEffects.eventPositive(fx.target, fx.float_text || "🌧️");
+                    } else if (fx.event_name === "snowstorm") {
+                        BattleEffects.eventNegative(fx.target, fx.float_text || "❄️");
+                    }
                     break;
                 case "endure":
                     BattleEffects.endure(fx.target);
@@ -245,7 +268,10 @@ const BattleReplay = (() => {
         document.getElementById("spin-a").classList.add("stopped");
         document.getElementById("spin-b").classList.add("stopped");
 
-        const steps = ["3", "2", "1", BattleI18n.countdownGo];
+        const steps = [];
+        if (battleCity) steps.push(battleCity);
+        if (battleWeatherName) steps.push((battleWeatherIcon || "") + " " + battleWeatherName);
+        steps.push("3", "2", "1", BattleI18n.countdownGo);
         let i = 0;
 
         overlay.classList.remove("hidden");
@@ -262,9 +288,11 @@ const BattleReplay = (() => {
             textEl.classList.remove("animate-countdown-pulse");
             void textEl.offsetWidth;
             textEl.classList.add("animate-countdown-pulse");
-            if (i < 3) {
+            const isGo = steps[i] === BattleI18n.countdownGo;
+            const isCount = steps[i] === "3" || steps[i] === "2" || steps[i] === "1";
+            if (isCount) {
                 BattleSound.countdownBeep();
-            } else {
+            } else if (isGo) {
                 BattleSound.countdownGo();
             }
             i++;
@@ -275,9 +303,13 @@ const BattleReplay = (() => {
 
     return {
         init(data) {
-            logData = data;
+            logData = data.log || data;
             currentIndex = 0;
             speed = 1;
+            battleWeather = data.weather || null;
+            battleCity = data.city || null;
+            battleWeatherName = data.weather_name || null;
+            battleWeatherIcon = data.weather_icon || null;
             updateSpeedButtons();
             hideEndControls();
             BattleEffects.updateSpeed("a", 0, 200);
@@ -339,7 +371,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("spin-b").dataset.maxSpeed = initSpeedB * 2;
 
     BattleSound.init();
-    BattleReplay.init(data.log);
+    BattleReplay.init(data);
 
     const modeLabel = document.getElementById("battle-mode-label");
     if (modeLabel) {
@@ -359,6 +391,19 @@ document.addEventListener("DOMContentLoaded", () => {
             scoreB.style.color = "#9ca3af";
             scoreB.classList.remove("hidden");
         }
+    }
+
+    if (data.weather) {
+        const weatherInfo = document.getElementById("weather-info");
+        const weatherIcon = document.getElementById("weather-icon");
+        const weatherCity = document.getElementById("weather-city");
+        if (weatherInfo && weatherIcon && weatherCity) {
+            weatherInfo.classList.remove("hidden");
+            weatherInfo.classList.add("weather-" + data.weather);
+            weatherIcon.textContent = data.weather_icon || "";
+            weatherCity.textContent = (data.city || "") + " " + (data.weather_name || "");
+        }
+        BattleEffects.startWeatherEffect(data.weather);
     }
 
     document.getElementById("btn-play").addEventListener("click", () => {

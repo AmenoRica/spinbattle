@@ -10,6 +10,7 @@ from battle.types import SPIN_TYPE_CHOICES, compute_type_from_image
 
 class CustomUser(AbstractUser):
     bio = models.TextField(blank=True)
+    is_hidden = models.BooleanField(default=False)
 
     def __str__(self):
         return self.username
@@ -23,7 +24,7 @@ class SpinImage(models.Model):
     name = models.CharField(max_length=30)
     image = models.ImageField(upload_to="spins/%Y/%m/%d/")
     hash = models.CharField(max_length=64, unique=True, editable=False)
-    spin_type = models.CharField(max_length=10, choices=SPIN_TYPE_CHOICES, default="steel", editable=False)
+    spin_type = models.CharField(max_length=10, choices=SPIN_TYPE_CHOICES, default="", editable=False)
     wins = models.PositiveIntegerField(default=0)
     losses = models.PositiveIntegerField(default=0)
     battle_score = models.IntegerField(default=1000)

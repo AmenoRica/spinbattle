@@ -1,0 +1,80 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "팽이 이미지 대량 업로드" %}{% endblock %}
+
+{% block content %}
+<div style="max-width: 700px; margin: 20px auto;">
+    <h2 style="margin-bottom: 20px;">{% trans "팽이 이미지 대량 업로드" %}</h2>
+
+    {% if messages %}
+    <ul class="messagelist">
+        {% for message in messages %}
+        <li{% if message.tags %} class="{{ message.tags }}"{% endif %}>{{ message }}</li>
+        {% endfor %}
+    </ul>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data" id="bulk-form">
+        {% csrf_token %}
+
+        <div style="margin-bottom: 16px;">
+            <label for="id_user" style="display:block; font-weight:bold; margin-bottom:4px;">{{ form.user.label }}</label>
+            {{ form.user }}
+            {% if form.user.help_text %}<p style="font-size:12px; color:#666; margin:4px 0 0 0;">{{ form.user.help_text }}</p>{% endif %}
+            {% if form.user.errors %}<p style="color:red; font-size:12px; margin:4px 0 0 0;">{{ form.user.errors }}</p>{% endif %}
+        </div>
+
+        <div style="margin-bottom: 16px;">
+            <label for="id_name_prefix" style="display:block; font-weight:bold; margin-bottom:4px;">{{ form.name_prefix.label }}</label>
+            {{ form.name_prefix }}
+            {% if form.name_prefix.help_text %}<p style="font-size:12px; color:#666; margin:4px 0 0 0;">{{ form.name_prefix.help_text }}</p>{% endif %}
+            {% if form.name_prefix.errors %}<p style="color:red; font-size:12px; margin:4px 0 0 0;">{{ form.name_prefix.errors }}</p>{% endif %}
+        </div>
+
+        <div style="margin-bottom: 16px;">
+            <label for="id_images" style="display:block; font-weight:bold; margin-bottom:4px;">{{ form.images.label }}</label>
+            <input type="file" name="images" id="id_images" accept="image/*" multiple style="border:1px solid #ccc; padding:8px; width:100%; box-sizing:border-box;">
+            {% if form.images.help_text %}<p style="font-size:12px; color:#666; margin:4px 0 0 0;">{{ form.images.help_text }}</p>{% endif %}
+            {% if form.images.errors %}<p style="color:red; font-size:12px; margin:4px 0 0 0;">{{ form.images.errors }}</p>{% endif %}
+            <p id="file-count" style="font-size:12px; color:#888; margin:4px 0 0 0;"></p>
+        </div>
+
+        <div style="margin-bottom: 16px;">
+            <button type="submit" style="background:#417690; color:white; padding:10px 24px; border:none; border-radius:4px; cursor:pointer; font-size:14px;">{% trans "업로드" %}</button>
+            <a href="{% url 'admin:accounts_spinimage_changelist' %}" style="margin-left:12px; color:#417690; text-decoration:none;">{% trans "목록으로 돌아가기" %}</a>
+        </div>
+    </form>
+
+    {% if results %}
+    <div style="margin-top:24px; padding:16px; background:#f8f8f8; border:1px solid #ddd; border-radius:4px;">
+        <h3 style="margin:0 0 12px 0;">{% trans "업로드 결과" %}</h3>
+        <p>{% trans "전체 파일" %}: {{ results.total }}</p>
+        <p style="color:green;">{% trans "생성 완료" %}: {{ results.created }}</p>
+        {% if results.skipped_dup > 0 %}
+        <p style="color:orange;">{% trans "중복 해시 스킵" %}: {{ results.skipped_dup }}</p>
+        {% endif %}
+        {% if results.skipped_size > 0 %}
+        <p style="color:red;">{% trans "크기 초과 스킵 (5MB)" %}: {{ results.skipped_size }}</p>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+(function() {
+    var input = document.getElementById("id_images");
+    var countEl = document.getElementById("file-count");
+    if (input) {
+        input.addEventListener("change", function() {
+            var count = this.files ? this.files.length : 0;
+            if (count > 0) {
+                countEl.textContent = count + "개의 파일이 선택되었습니다.";
+            } else {
+                countEl.textContent = "";
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}

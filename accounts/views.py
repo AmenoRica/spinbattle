@@ -16,6 +16,10 @@ from battle.engine import simulate
 from battle.rating import compute_new_ratings
 from battle.stats import compute_stats, get_grade, get_grade_color, get_stat_names, STAT_KEYS
 from battle.types import SPIN_TYPES, compute_type_from_image, get_type_name
+from battle.weather import get_weather_name, get_weather_icon
+
+from weather.cities import random_city
+from weather.api import get_weather_for_city
 
 from .forms import CustomUserChangeForm, CustomUserCreationForm, SpinImageForm, SpinImageRenameForm
 from .models import CustomUser, SpinImage
@@ -84,9 +88,12 @@ def upload_preview(request):
     spin_image.spin_type = compute_type_from_image(spin_image.image)
     spin_image.image.seek(0)
 
-    existing = SpinImage.objects.filter(user=request.user).count()
-    if existing >= SpinImage.MAX_PER_USER:
+    existing_count = SpinImage.objects.filter(user=request.user).count()
+    if existing_count >= SpinImage.MAX_PER_USER:
         return JsonResponse({"error": {"image": [_("이미지는 최대 %(count)s개까지 업로드할 수 있습니다.") % {"count": SpinImage.MAX_PER_USER}]}}, status=400)
+
+    if SpinImage.objects.filter(hash=spin_image.hash).exists():
+        return JsonResponse({"error": {"image": [_("이미 같은 이미지를 업로드한 유저가 있습니다!")]}}, status=400)
 
     lang = get_language() or "ko"
     stats = compute_stats(spin_image.hash)
@@ -125,12 +132,22 @@ def upload_image(request):
             spin_image.user = request.user
             try:
                 spin_image.full_clean()
-                spin_image.save()
-                return redirect("upload_image")
             except ValidationError as e:
                 for field, errors in e.message_dict.items():
                     for error in errors:
                         form.add_error(field, error)
+                return render(request, "accounts/upload.html", {"form": form, "spin_images": request.user.spin_images.all()})
+
+            if spin_image.image:
+                spin_image.image.seek(0)
+                file_hash = hashlib.sha256(spin_image.image.read()).hexdigest()
+                spin_image.image.seek(0)
+                if SpinImage.objects.filter(hash=file_hash).exists():
+                    form.add_error("image", _("이미 같은 이미지를 업로드한 유저가 있습니다!"))
+                    return render(request, "accounts/upload.html", {"form": form, "spin_images": request.user.spin_images.all()})
+
+            spin_image.save()
+            return redirect("upload_image")
     else:
         form = SpinImageForm()
     spin_images = request.user.spin_images.all()
@@ -156,7 +173,7 @@ def rename_image(request, pk):
 
 
 def user_list(request):
-    users = CustomUser.objects.prefetch_related(
+    users = CustomUser.objects.filter(is_hidden=False).prefetch_related(
         Prefetch("spin_images", queryset=SpinImage.objects.order_by("-uploaded_at"))
     ).annotate(
         total_score=Coalesce(Sum("spin_images__battle_score"), 0),
@@ -241,7 +258,7 @@ def _spin_json(spin, lang):
     }
 
 
-def _build_battle_json(my_spin, opp_spin, log, mode, lang, old_score_a=None, new_score_a=None, old_score_b=None, new_score_b=None):
+def _build_battle_json(my_spin, opp_spin, log, mode, lang, old_score_a=None, new_score_a=None, old_score_b=None, new_score_b=None, weather=None, city=None):
     spin_a = _spin_json(my_spin, lang)
     spin_b = _spin_json(opp_spin, lang)
     result = {
@@ -250,6 +267,12 @@ def _build_battle_json(my_spin, opp_spin, log, mode, lang, old_score_a=None, new
         "spin_b": spin_b,
         "log": log,
     }
+    if weather:
+        result["weather"] = weather
+        result["weather_name"] = get_weather_name(weather, lang)
+        result["weather_icon"] = get_weather_icon(weather)
+    if city:
+        result["city"] = city
     if mode == "ranked":
         spin_a["old_score"] = old_score_a
         spin_a["new_score"] = new_score_a
@@ -271,9 +294,12 @@ def friendly_battle(request):
 
     lang = get_language() or "ko"
     rng = random.Random()
-    log = simulate(my_spin.hash, opp_spin.hash, rng, my_spin.name, opp_spin.name, my_spin.spin_type, opp_spin.spin_type, lang=lang)
+    city = random_city(rng)
+    weather = get_weather_for_city(city)
+    city_name = city.get(f"name_{lang}", city.get("name_ko", ""))
+    log = simulate(my_spin.hash, opp_spin.hash, rng, my_spin.name, opp_spin.name, my_spin.spin_type, opp_spin.spin_type, lang=lang, weather=weather, city_name=city_name)
 
-    return JsonResponse(_build_battle_json(my_spin, opp_spin, log, "friendly", lang))
+    return JsonResponse(_build_battle_json(my_spin, opp_spin, log, "friendly", lang, weather=weather, city=city_name))
 
 
 @login_required
@@ -294,7 +320,10 @@ def ranked_battle(request):
 
     lang = get_language() or "ko"
     rng = random.Random()
-    log = simulate(my_spin.hash, opp_spin.hash, rng, my_spin.name, opp_spin.name, my_spin.spin_type, opp_spin.spin_type, lang=lang)
+    city = random_city(rng)
+    weather = get_weather_for_city(city)
+    city_name = city.get(f"name_{lang}", city.get("name_ko", ""))
+    log = simulate(my_spin.hash, opp_spin.hash, rng, my_spin.name, opp_spin.name, my_spin.spin_type, opp_spin.spin_type, lang=lang, weather=weather, city_name=city_name)
 
     last_effect = None
     for entry in log:
@@ -323,4 +352,4 @@ def ranked_battle(request):
         wins=opp_spin.wins, losses=opp_spin.losses, battle_score=new_b
     )
 
-    return JsonResponse(_build_battle_json(my_spin, opp_spin, log, "ranked", lang, old_score_a, new_a, old_score_b, new_b))
+    return JsonResponse(_build_battle_json(my_spin, opp_spin, log, "ranked", lang, old_score_a, new_a, old_score_b, new_b, weather=weather, city=city_name))

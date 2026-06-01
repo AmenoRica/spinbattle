@@ -191,6 +191,7 @@ final_damage = base_damage * (1 - defense_reduction)
 - **No comments in code**: Do not add comments unless explicitly asked.
 - **No tests yet**: `accounts/tests.py` is empty. When adding tests, use Django's `TestCase`.
 - **No REST framework**: Use `JsonResponse` directly for any API endpoints.
+- **Static file cache busting**: When modifying any file in `static/js/` or `static/css/`, you **MUST** increment the version number in the corresponding `{% static %}` tag in the template that references it. For example, if you change `battle.js`, find the `<script src="{% static 'js/battle.js' %}?v=6">` line in `battle_friendly.html` and bump `?v=6` to `?v=7`. This ensures browsers load the new version instead of using a cached copy. Failure to do this will cause bugs where changes appear to not take effect.
 
 ---
 

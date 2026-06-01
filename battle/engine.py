@@ -2,9 +2,10 @@ import math
 
 from .josa import JOSA
 from .messages import MESSAGES
-from .events import EVENT_DATA, EVENT_TEXT, ENDURE_THRESHOLD
+from .events import EVENT_DATA, EVENT_TEXT, ENDURE_THRESHOLD, WEATHER_EVENT_TEXT
 from .stats import compute_stats
 from .types import get_type_multiplier
+from .weather import WEATHER_STAT_MODS, WEATHER_CRIT_BONUS, WEATHER_EVENTS
 
 ACCEL_BASE_CHANCE = 0.15
 ACCEL_LUCK_SCALE = 0.55
@@ -70,6 +71,10 @@ def _build_negatives():
 
 POSITIVE_EVENTS = _build_positives()
 NEGATIVE_EVENTS = _build_negatives()
+
+WEATHER_RAIN_INFLUX_CHANCE = 0.08
+WEATHER_SNOWSTORM_CHANCE = 0.08
+WEATHER_SNOWSTORM_PCT = 0.20
 
 
 def _pick_event(events, rng):
@@ -146,7 +151,7 @@ def _apply_event(spin, event, side, log_entries, lang):
         log_entries.append({"text": detail, "effects": []})
 
 
-def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=None, lang="ko"):
+def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=None, lang="ko", weather=None, city_name=None):
     msgs = MESSAGES.get(lang, MESSAGES["ko"])
     josa_fn = JOSA.get(lang, JOSA["ko"])
 
@@ -183,6 +188,10 @@ def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=No
     a = make_spin(stats_a, name_a, type_a)
     b = make_spin(stats_b, name_b, type_b)
 
+    weather_mods = WEATHER_STAT_MODS.get(weather or "normal", {})
+    weather_crit_bonus = WEATHER_CRIT_BONUS.get(weather or "normal", 0.0)
+    weather_event_ids = WEATHER_EVENTS.get(weather or "normal", [])
+
     log_entries = []
 
     log_entries.append({
@@ -204,6 +213,59 @@ def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=No
         })
     log_entries.append({"text": "", "effects": []})
 
+    if weather and weather != "normal":
+        from .weather import get_weather_name
+        weather_name = get_weather_name(weather, lang)
+        city_display = city_name or ""
+        log_entries.append({
+            "text": msgs.get("weather_announce", "").format(city=city_display, weather_name=weather_name),
+            "effects": [{"type": "weather_announce", "weather": weather, "city": city_display, "weather_name": weather_name}],
+        })
+
+        for spin, side in [(a, "a"), (b, "b")]:
+            spin_type = spin.get("spin_type")
+            type_mods = weather_mods.get(spin_type, {})
+            for mod_key, mod_val in type_mods.items():
+                effect_key = f"weather_effect_{weather}_{spin_type}"
+                if mod_key == "attack":
+                    spin["attack"] = int(spin["attack"] * mod_val)
+                    log_entries.append({
+                        "text": msgs.get(effect_key, ""),
+                        "effects": [{"type": "weather_effect", "target": side, "weather": weather, "stat": "attack"}],
+                    })
+                elif mod_key == "defense":
+                    spin["defense"] = int(spin["defense"] * mod_val)
+                    log_entries.append({
+                        "text": msgs.get(effect_key, ""),
+                        "effects": [{"type": "weather_effect", "target": side, "weather": weather, "stat": "defense"}],
+                    })
+                elif mod_key == "luck":
+                    spin["luck"] = int(spin["luck"] * mod_val)
+                    log_entries.append({
+                        "text": msgs.get(effect_key, ""),
+                        "effects": [{"type": "weather_effect", "target": side, "weather": weather, "stat": "luck"}],
+                    })
+                elif mod_key == "speed_recover_bonus":
+                    spin["speed_recover_bonus"] = mod_val
+                    log_entries.append({
+                        "text": msgs.get(effect_key, ""),
+                        "effects": [{"type": "weather_effect", "target": side, "weather": weather, "stat": "speed_recover"}],
+                    })
+                elif mod_key == "decel_mult":
+                    spin["decel_mult"] = mod_val
+                    log_entries.append({
+                        "text": msgs.get(effect_key, ""),
+                        "effects": [{"type": "weather_effect", "target": side, "weather": weather, "stat": "decel"}],
+                    })
+
+        if weather == "clear":
+            log_entries.append({
+                "text": msgs.get("weather_effect_clear_crit", ""),
+                "effects": [{"type": "weather_effect", "target": "both", "weather": weather, "stat": "crit"}],
+            })
+
+        log_entries.append({"text": "", "effects": []})
+
     winner = None
 
     for turn in range(1, MAX_TURNS + 1):
@@ -224,6 +286,8 @@ def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=No
             if rng.random() < chance:
                 old_speed = spin["speed"]
                 boost = ACCEL_AMOUNT_FACTOR * math.sqrt(spin["acceleration"])
+                if "speed_recover_bonus" in spin:
+                    boost += spin["speed_recover_bonus"]
                 spin["speed"] += boost
                 if spin["speed"] > spin["max_speed"]:
                     spin["max_speed"] = spin["speed"]
@@ -263,7 +327,7 @@ def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=No
 
             base_damage = (attacker["speed"] * atk) / BASE_DAMAGE_DIVISOR
 
-            is_crit = rng.random() < (CRIT_BASE_CHANCE + CRIT_LUCK_SCALE * (attacker["luck"] / 100))
+            is_crit = rng.random() < (CRIT_BASE_CHANCE + CRIT_LUCK_SCALE * (attacker["luck"] / 100) + weather_crit_bonus)
             multiplier = 1.0
             if is_crit:
                 multiplier = CRIT_BASE_MULTIPLIER + attacker["acceleration"] * CRIT_ACCEL_SCALE
@@ -368,6 +432,41 @@ def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=No
                     event = _pick_event(NEGATIVE_EVENTS, rng)
                 _apply_event(spin, event, side, log_entries, lang)
 
+        if weather == "rain" and weather_event_ids:
+            for spin, side in [(a, "a"), (b, "b")]:
+                if rng.random() < WEATHER_RAIN_INFLUX_CHANCE:
+                    evt_text = WEATHER_EVENT_TEXT.get(lang, WEATHER_EVENT_TEXT["ko"]).get("rain_influx", {})
+                    old_speed = spin["speed"]
+                    bonus = spin.get("speed_recover_bonus", 0)
+                    spin["speed"] = min(spin["speed"] + 5.0 + bonus, spin["speed"] * 2)
+                    name = spin["name"]
+                    josa_pair = ("은", "는") if lang == "ko" else (("は",) if lang == "ja" else ("",))
+                    name_josa = josa_fn(name, josa_pair) if josa_pair[0] else name
+                    msg_template = evt_text.get("message", "rain_influx")
+                    msg = msg_template.replace("{name_josa}", name_josa).replace("{name}", name)
+                    detail_template = evt_text.get("log", "")
+                    detail = detail_template.replace("{old}", f"{old_speed:.1f}").replace("{new}", f"{spin['speed']:.1f}")
+                    log_entries.append({"text": msg, "effects": [{"type": "weather_event", "target": side, "weather": "rain", "event_name": "rain_influx", "float_text": evt_text.get("float_text", "")}]})
+                    if detail:
+                        log_entries.append({"text": detail, "effects": []})
+
+        if weather == "snow" and weather_event_ids:
+            for spin, side in [(a, "a"), (b, "b")]:
+                if rng.random() < WEATHER_SNOWSTORM_CHANCE:
+                    evt_text = WEATHER_EVENT_TEXT.get(lang, WEATHER_EVENT_TEXT["ko"]).get("snowstorm", {})
+                    old_speed = spin["speed"]
+                    spin["speed"] = max(spin["speed"] - spin["speed"] * WEATHER_SNOWSTORM_PCT, 0)
+                    name = spin["name"]
+                    josa_pair = ("은", "는") if lang == "ko" else (("は",) if lang == "ja" else ("",))
+                    name_josa = josa_fn(name, josa_pair) if josa_pair[0] else name
+                    msg_template = evt_text.get("message", "snowstorm")
+                    msg = msg_template.replace("{name_josa}", name_josa).replace("{name}", name)
+                    detail_template = evt_text.get("log", "")
+                    detail = detail_template.replace("{old}", f"{old_speed:.1f}").replace("{new}", f"{spin['speed']:.1f}")
+                    log_entries.append({"text": msg, "effects": [{"type": "weather_event", "target": side, "weather": "snow", "event_name": "snowstorm", "float_text": evt_text.get("float_text", "")}]})
+                    if detail:
+                        log_entries.append({"text": detail, "effects": []})
+
         if a["speed"] <= 0 and not (a["endure"] and not a["endured"]):
             a_josa = josa_fn(a["name"], subject)
             log_entries.append({"text": msgs["stop_one"].format(name_josa=a_josa, name=a["name"]), "effects": [{"type": "stop", "target": "a"}]})
@@ -397,8 +496,10 @@ def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=No
 
         old_a = a["speed"]
         old_b = b["speed"]
-        a["speed"] = max(a["speed"] - BASE_DECEL * (DECEL_STAMINA_SCALE / a["stamina"]) * growth, 0)
-        b["speed"] = max(b["speed"] - BASE_DECEL * (DECEL_STAMINA_SCALE / b["stamina"]) * growth, 0)
+        decel_a = BASE_DECEL * (DECEL_STAMINA_SCALE / a["stamina"]) * growth * a.get("decel_mult", 1.0)
+        decel_b = BASE_DECEL * (DECEL_STAMINA_SCALE / b["stamina"]) * growth * b.get("decel_mult", 1.0)
+        a["speed"] = max(a["speed"] - decel_a, 0)
+        b["speed"] = max(b["speed"] - decel_b, 0)
 
         log_entries.append({
             "text": msgs["decel"].format(
@@ -449,6 +550,6 @@ def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=No
     return log_entries
 
 
-def simulate_text(hash_a, hash_b, rng, name_a="A", name_b="B", lang="ko"):
-    entries = simulate(hash_a, hash_b, rng, name_a, name_b, lang=lang)
+def simulate_text(hash_a, hash_b, rng, name_a="A", name_b="B", lang="ko", weather=None, city_name=None):
+    entries = simulate(hash_a, hash_b, rng, name_a, name_b, lang=lang, weather=weather, city_name=city_name)
     return "\n".join(e["text"] for e in entries)

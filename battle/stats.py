@@ -1,3 +1,5 @@
+import math
+
 STAT_NAMES = {
     "ko": {
         "speed": "초기 속도",
@@ -91,12 +93,17 @@ def get_grade_color(grade):
     return "#6b7280"
 
 
+STAT_LOG_EXPONENT = 1.5
+STAT_MAX_VAL = 16 ** (64 // len(STAT_KEYS))
+
+
 def compute_stats(hash_str):
     chunk_size = len(hash_str) // len(STAT_KEYS)
     stats = {}
     for i, key in enumerate(STAT_KEYS):
         chunk = hash_str[i * chunk_size : (i + 1) * chunk_size]
         value = int(chunk, 16)
-        mapped = 10 + (value % 91)
+        raw = value / STAT_MAX_VAL
+        mapped = 10 + int(90 * (raw ** STAT_LOG_EXPONENT))
         stats[key] = mapped
     return stats

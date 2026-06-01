@@ -90,10 +90,23 @@ pip install -r requirements.txt
 ```bash
 SECRET_KEY=your-secret-key-here
 DEBUG=True
+USE_R2_STORAGE=False
 ```
 
 - `SECRET_KEY`: Django 시크릿 키 (프로덕션에서는 반드시 변경)
 - `DEBUG`: `True`면 디버그 모드, `False`면 프로덕션 모드
+- `USE_R2_STORAGE`: `True`면 Cloudflare R2를 미디어 저장소로 사용
+
+R2 사용 시 아래도 함께 설정:
+
+```bash
+R2_ACCOUNT_ID=your-cloudflare-account-id
+R2_BUCKET_NAME=spinbattle-media
+R2_ACCESS_KEY_ID=your-r2-access-key-id
+R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
+R2_ENDPOINT_URL=https://your-account-id.r2.cloudflarestorage.com
+R2_PUBLIC_URL=https://media.your-domain.com
+```
 
 ### 5. 데이터베이스 마이그레이션
 
@@ -203,6 +216,36 @@ python manage.py compilemessages       # 컴파일
 ## 관리자 대량 업로드
 
 Django Admin(`/admin/`)에서 `SpinImage` 모델의 "Bulk upload" 액션으로 여러 이미지를 한 번에 등록할 수 있습니다. 시스템 유저(is_hidden=True)의 팽이로 등록되며, MAX_PER_USER 제한을 우회합니다.
+
+---
+
+## Cloudflare R2 전환
+
+1. 의존성 설치
+
+```bash
+pip install -r requirements.txt
+```
+
+2. `.env`에 R2 환경변수 입력 후 `USE_R2_STORAGE=True` 설정
+
+3. 점검
+
+```bash
+python manage.py check
+```
+
+4. 기존 로컬 `media/` 파일 이전 (선택)
+
+```bash
+python manage.py migrate_media_to_r2 --dry-run
+python manage.py migrate_media_to_r2
+```
+
+5. 확인
+- 새 업로드가 R2에 저장되는지
+- 기존 이미지 URL이 정상 출력되는지
+- 이미지 삭제 시 R2 파일도 삭제되는지
 
 ---
 

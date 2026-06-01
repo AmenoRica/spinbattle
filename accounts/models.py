@@ -4,6 +4,7 @@ from django.contrib.auth.models import AbstractUser
 from django.utils.translation import gettext_lazy as _
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.core.files.storage import default_storage
 
 from battle.types import SPIN_TYPE_CHOICES, compute_type_from_image
 
@@ -56,3 +57,9 @@ class SpinImage(models.Model):
         if self.image and not self.spin_type:
             self.spin_type = compute_type_from_image(self.image)
         super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        image_name = self.image.name
+        super().delete(*args, **kwargs)
+        if image_name and default_storage.exists(image_name):
+            default_storage.delete(image_name)

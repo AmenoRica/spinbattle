@@ -8,6 +8,7 @@ build/
 
 .env
 .env.*
+!.env.example
 
 db.sqlite3
 db.sqlite3-journal

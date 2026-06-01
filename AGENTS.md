@@ -32,6 +32,7 @@ spinbattle/
 │   ├── forms.py                  # 5 forms: creation, change, upload, rename, bulk upload
 │   ├── admin.py                  # CustomUserAdmin + SpinImageAdmin + bulk upload action
 │   ├── urls.py                   # All app URL patterns
+│   ├── management/commands/      # migrate_media_to_r2 command
 │   └── migrations/               # 8 migrations to date
 │
 ├── battle/                       # Pure Python package — NOT a Django app
@@ -74,6 +75,7 @@ spinbattle/
 - **Battle data via localStorage**: Battle sends POST → JSON response → `localStorage` → navigate to battle page → JS reads `localStorage` and replays. Both friendly and ranked battles use the same battle page.
 - **ELO rating**: Standard ELO with K=32. Ranked battles update `wins`, `losses`, `battle_score` on both spins.
 - **Matchmaking**: Ranked battles use score-proximity weighted random selection from all other users' spins.
+- **Media storage**: Supports local media and Cloudflare R2 (S3-compatible) via `USE_R2_STORAGE` toggle.
 
 ---
 
@@ -229,6 +231,10 @@ python manage.py runserver
 # Create superuser
 python manage.py createsuperuser
 
+# R2 migration
+python manage.py migrate_media_to_r2 --dry-run
+python manage.py migrate_media_to_r2
+
 # Type computation for existing images (manual)
 python -c "
 import django; import os
@@ -246,5 +252,4 @@ for si in SpinImage.objects.all():
 ## Known Gaps
 
 - No tests
-- No image deletion from filesystem when SpinImage is deleted
-- Media files not served in production (DEBUG only)
+- R2 key/endpoint provisioning issues may temporarily block uploads until Cloudflare side recovers

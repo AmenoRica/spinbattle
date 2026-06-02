@@ -8,11 +8,21 @@ from django.test import TestCase, override_settings
 
 from PIL import Image
 
+from battle.engine import _accel_turn_multiplier
+
 from .models import CustomUser, SpinImage
 from .views import PLACEMENT_ROUNDS, _run_placement
 
 
 TEST_MEDIA_ROOT = tempfile.mkdtemp()
+
+
+class EngineAccelerationTests(TestCase):
+    def test_turn_start_acceleration_fades_after_turn_twenty_and_stops_after_twenty_five(self):
+        self.assertEqual(_accel_turn_multiplier(20), 1.0)
+        self.assertAlmostEqual(_accel_turn_multiplier(21), 5 / 6)
+        self.assertAlmostEqual(_accel_turn_multiplier(25), 1 / 6)
+        self.assertEqual(_accel_turn_multiplier(26), 0.0)
 
 
 @override_settings(

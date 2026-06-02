@@ -16,10 +16,11 @@
                 <div class="flex items-center gap-4">
                     <a href="{% url 'ranking' %}" class="text-gray-300 hover:text-white transition">{% trans "랭킹" %}</a>
                     <a href="{% url 'user_list' %}" class="text-gray-300 hover:text-white transition">{% trans "유저 목록" %}</a>
+                    <button type="button" onclick="openTypeChartModal()" class="text-gray-300 hover:text-white transition">{% trans "상성표" %}</button>
                     {% if user.is_authenticated %}
                     <a href="{% url 'my_spins' %}" class="text-gray-300 hover:text-white transition">{% trans "내 팽이" %}</a>
                     {% if user.spin_images.exists %}
-                    <button type="button" onclick="document.getElementById('ranked-modal').classList.remove('hidden')"
+                    <button type="button" onclick="openRankedModal()"
                             class="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-md transition font-bold text-sm">{% trans "랭크 대전" %}</button>
                     {% endif %}
                     {% endif %}
@@ -57,13 +58,125 @@
         &copy; SpinBattle
     </footer>
 
+    <div id="type-chart-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg max-w-3xl w-full max-h-[90vh] overflow-hidden border border-gray-700">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-gray-700">
+                <div>
+                    <h3 class="text-lg font-bold">{% trans "상성표" %}</h3>
+                    <p class="text-sm text-gray-400 mt-1">{% trans "공격 속성이 방어 속성에 유리하면 피해가 1.2배가 됩니다." %}</p>
+                </div>
+                <button type="button" onclick="closeTypeChartModal()" class="text-gray-400 hover:text-white text-2xl leading-none" aria-label="{% trans '닫기' %}">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto max-h-[calc(90vh-90px)]">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div class="bg-gray-700/70 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-3 h-3 rounded-full" style="background:#F08030"></span>
+                            <span class="font-bold">{% trans "불꽃" %}</span>
+                        </div>
+                        <p class="text-sm text-gray-300">{% trans "풀, 얼음에 유리" %}</p>
+                    </div>
+                    <div class="bg-gray-700/70 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-3 h-3 rounded-full" style="background:#6890F0"></span>
+                            <span class="font-bold">{% trans "물" %}</span>
+                        </div>
+                        <p class="text-sm text-gray-300">{% trans "불꽃, 강철에 유리" %}</p>
+                    </div>
+                    <div class="bg-gray-700/70 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-3 h-3 rounded-full" style="background:#78C850"></span>
+                            <span class="font-bold">{% trans "풀" %}</span>
+                        </div>
+                        <p class="text-sm text-gray-300">{% trans "물, 전기에 유리" %}</p>
+                    </div>
+                    <div class="bg-gray-700/70 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-3 h-3 rounded-full" style="background:#F8D030"></span>
+                            <span class="font-bold">{% trans "전기" %}</span>
+                        </div>
+                        <p class="text-sm text-gray-300">{% trans "물, 얼음에 유리" %}</p>
+                    </div>
+                    <div class="bg-gray-700/70 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-3 h-3 rounded-full" style="background:#98D8D8"></span>
+                            <span class="font-bold">{% trans "얼음" %}</span>
+                        </div>
+                        <p class="text-sm text-gray-300">{% trans "풀, 드래곤에 유리" %}</p>
+                    </div>
+                    <div class="bg-gray-700/70 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-3 h-3 rounded-full" style="background:#B8B8D0"></span>
+                            <span class="font-bold">{% trans "강철" %}</span>
+                        </div>
+                        <p class="text-sm text-gray-300">{% trans "얼음, 악에 유리" %}</p>
+                    </div>
+                    <div class="bg-gray-700/70 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-3 h-3 rounded-full" style="background:#7038F8"></span>
+                            <span class="font-bold">{% trans "드래곤" %}</span>
+                        </div>
+                        <p class="text-sm text-gray-300">{% trans "에스퍼, 전기에 유리" %}</p>
+                    </div>
+                    <div class="bg-gray-700/70 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-3 h-3 rounded-full" style="background:#705848"></span>
+                            <span class="font-bold">{% trans "악" %}</span>
+                        </div>
+                        <p class="text-sm text-gray-300">{% trans "에스퍼, 드래곤에 유리" %}</p>
+                    </div>
+                    <div class="bg-gray-700/70 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-3 h-3 rounded-full" style="background:#F85888"></span>
+                            <span class="font-bold">{% trans "에스퍼" %}</span>
+                        </div>
+                        <p class="text-sm text-gray-300">{% trans "격투, 불꽃에 유리" %}</p>
+                    </div>
+                    <div class="bg-gray-700/70 rounded-lg p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-3 h-3 rounded-full" style="background:#C03028"></span>
+                            <span class="font-bold">{% trans "격투" %}</span>
+                        </div>
+                        <p class="text-sm text-gray-300">{% trans "강철, 악에 유리" %}</p>
+                    </div>
+                </div>
+                <p class="mt-5 text-sm text-gray-400">{% trans "반대로 공격하면 약 0.83배가 되고, 그 외 조합은 1.0배입니다." %}</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    function openTypeChartModal() {
+        document.getElementById('type-chart-modal').classList.remove('hidden');
+    }
+
+    function closeTypeChartModal() {
+        document.getElementById('type-chart-modal').classList.add('hidden');
+    }
+
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            closeTypeChartModal();
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('type-chart-modal');
+        modal.addEventListener('click', function(event) {
+            if (event.target === modal) {
+                closeTypeChartModal();
+            }
+        });
+    });
+    </script>
+
     {% if user.is_authenticated and user.spin_images.exists %}
     <div id="ranked-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4">
         <div class="bg-gray-800 rounded-lg max-w-md w-full p-6">
             <h3 class="text-lg font-bold mb-4">{% trans "랭크 대전 — 내 팽이를 선택하세요" %}</h3>
             <div class="space-y-3">
                 {% for img in user.spin_images.all %}
-                <button type="button" onclick="startRanked({{ img.pk }})"
+                <button type="button" onclick="startRanked({{ img.pk }}, this)"
                         class="w-full flex items-center gap-3 bg-gray-700 hover:bg-gray-600 rounded-lg p-3 transition text-left">
                     <img src="{{ img.image.url }}" alt="{{ img.name }}" class="w-12 h-12 object-cover rounded">
                     <div>
@@ -73,7 +186,7 @@
                 </button>
                 {% endfor %}
             </div>
-            <button type="button" onclick="document.getElementById('ranked-modal').classList.add('hidden')" class="mt-4 w-full text-gray-500 hover:text-gray-300 py-2 transition">{% trans "취소" %}</button>
+            <button type="button" onclick="closeRankedModal()" class="mt-4 w-full text-gray-500 hover:text-gray-300 py-2 transition">{% trans "취소" %}</button>
         </div>
     </div>
 
@@ -93,8 +206,25 @@
         return cookieValue;
     }
 
-    function startRanked(mySpinPk) {
-        const btn = event.target;
+    function openRankedModal() {
+        document.getElementById('ranked-modal').classList.remove('hidden');
+    }
+
+    function closeRankedModal() {
+        document.getElementById('ranked-modal').classList.add('hidden');
+    }
+
+    function closeRankedModalAfterBattle() {
+        if (sessionStorage.getItem('close_ranked_modal_after_battle') === '1') {
+            sessionStorage.removeItem('close_ranked_modal_after_battle');
+            closeRankedModal();
+        }
+    }
+
+    window.addEventListener('pageshow', closeRankedModalAfterBattle);
+    document.addEventListener('DOMContentLoaded', closeRankedModalAfterBattle);
+
+    function startRanked(mySpinPk, btn) {
         if (btn.disabled) return;
         btn.disabled = true;
         const csrftoken = getCookie('csrftoken');
@@ -114,6 +244,7 @@
                 return;
             }
             localStorage.setItem('battle_data', JSON.stringify(data));
+            closeRankedModal();
             window.location.href = '{% url "battle_friendly" %}';
         })
         .catch(err => {

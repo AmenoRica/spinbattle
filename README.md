@@ -130,6 +130,40 @@ python manage.py runserver
 
 브라우저에서 `http://127.0.0.1:8000/` 접속
 
+### 8. 임시 외부 공개(터널링, Turnkey)
+
+`cloudflared`가 설치되어 있으면 아래 한 줄로 로컬 서버 + 외부 터널을 동시에 실행합니다.
+
+```bash
+./scripts/tunnel.sh
+```
+
+- Django는 `0.0.0.0:8000`으로 실행됩니다.
+- 외부 접속 URL은 `cloudflared` 출력의 `https://*.trycloudflare.com` 주소를 사용합니다.
+- 종료는 `Ctrl+C` 한 번이면 되고, Django 서버도 같이 정리됩니다.
+- 실행 시 `DEBUG=False`가 강제됩니다.
+- 실행 시 `ALLOWED_HOSTS`에 `.trycloudflare.com`, `CSRF_TRUSTED_ORIGINS`에 `https://*.trycloudflare.com`이 자동 반영됩니다.
+- 실행 시 기본으로 슈퍼유저 임시 비밀번호를 새로 발급해 출력합니다.
+
+필요 시 포트/호스트 변경:
+
+```bash
+PORT=9000 HOST=0.0.0.0 ./scripts/tunnel.sh
+```
+
+임시 비밀번호 발급 제어:
+
+```bash
+ISSUE_TEMP_ADMIN_PASSWORD=0 ./scripts/tunnel.sh
+ADMIN_USERNAME=admin ./scripts/tunnel.sh
+```
+
+macOS에서 `cloudflared` 설치:
+
+```bash
+brew install cloudflare/cloudflare/cloudflared
+```
+
 ---
 
 ## 핵심 기능

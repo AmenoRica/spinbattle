@@ -18,6 +18,8 @@ media/
 
 node_modules/
 
+.run/
+
 .DS_Store
 *.swp
 *.swo

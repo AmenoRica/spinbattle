@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 _cache = {}
 _CACHE_TTL = 1800
+_REQUEST_TIMEOUT = 1.2
 
 WMO_TO_WEATHER = {
     0: "clear",
@@ -57,7 +58,7 @@ def get_weather_for_city(city):
             "latitude": city["latitude"],
             "longitude": city["longitude"],
             "current_weather": "true",
-        }, timeout=5)
+        }, timeout=_REQUEST_TIMEOUT)
         resp.raise_for_status()
         data = resp.json()
         wmo_code = data.get("current_weather", {}).get("weathercode", None)

@@ -12,7 +12,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-change-me")
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [host.strip() for host in os.getenv("ALLOWED_HOSTS", "").split(",") if host.strip()]
+if not ALLOWED_HOSTS:
+    ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -26,6 +28,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.locale.LocaleMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -89,6 +92,7 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
@@ -106,6 +110,8 @@ if USE_R2_STORAGE:
         raise ImproperlyConfigured("R2_ACCOUNT_ID가 설정되지 않았습니다.")
     if not R2_BUCKET_NAME:
         raise ImproperlyConfigured("R2_BUCKET_NAME이 설정되지 않았습니다.")
+    if not R2_PUBLIC_URL:
+        raise ImproperlyConfigured("R2_PUBLIC_URL이 설정되지 않았습니다.")
 
     AWS_ACCESS_KEY_ID = os.getenv("R2_ACCESS_KEY_ID", "")
     AWS_SECRET_ACCESS_KEY = os.getenv("R2_SECRET_ACCESS_KEY", "")
@@ -137,18 +143,24 @@ if USE_R2_STORAGE:
                 "default_acl": AWS_DEFAULT_ACL,
                 "querystring_auth": AWS_QUERYSTRING_AUTH,
                 "file_overwrite": AWS_S3_FILE_OVERWRITE,
-                "custom_domain": R2_PUBLIC_URL.replace("https://", "").replace("http://", "") if R2_PUBLIC_URL else None,
+                "custom_domain": R2_PUBLIC_URL.replace("https://", "").replace("http://", ""),
             },
         },
         "staticfiles": {
-            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
         },
     }
 
-    if R2_PUBLIC_URL:
-        MEDIA_URL = f"{R2_PUBLIC_URL.rstrip('/')}/"
+    MEDIA_URL = f"{R2_PUBLIC_URL.rstrip('/')}/"
 
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5242880
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5242880
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if origin.strip()]
+
+if not USE_R2_STORAGE:
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+    }
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

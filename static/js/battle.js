@@ -8,6 +8,7 @@ const BattleReplay = (() => {
     let battleCity = null;
     let battleWeatherName = null;
     let battleWeatherIcon = null;
+    let soundSuppressed = false;
     const BASE_INTERVAL = 600;
 
     function getInterval() {
@@ -37,6 +38,10 @@ const BattleReplay = (() => {
         };
     }
 
+    function playSound(fn) {
+        if (!soundSuppressed) fn();
+    }
+
     function processEntry(entry) {
         if (!entry) return;
         if (entry.text) {
@@ -56,22 +61,25 @@ const BattleReplay = (() => {
                 case "accel":
                     BattleEffects.accel(fx.target, fx.old_speed, fx.new_speed);
                     BattleEffects.updateSpeed(fx.target, fx.new_speed, fx.target === "a" ? maxA : maxB);
-                    BattleSound.accel();
+                    playSound(() => BattleSound.accel());
                     break;
                 case "accel_fail":
                     BattleEffects.accelFail(fx.target);
-                    BattleSound.accelFail();
+                    playSound(() => BattleSound.accelFail());
                     break;
                 case "first_strike":
                     BattleEffects.firstStrike(fx.target);
-                    BattleSound.firstStrike();
+                    playSound(() => BattleSound.firstStrike());
                     break;
                 case "attack":
                     BattleEffects.attack(fx.attacker, fx.defender, fx.crit);
+                    if (typeof fx.new_speed === "number") {
+                        BattleEffects.updateSpeed(fx.defender, fx.new_speed, fx.defender === "a" ? maxA : maxB);
+                    }
                     if (fx.crit) {
-                        BattleSound.crit();
+                        playSound(() => BattleSound.crit());
                     } else {
-                        BattleSound.attack();
+                        playSound(() => BattleSound.attack());
                     }
                     break;
                 case "counter_fail":
@@ -79,11 +87,11 @@ const BattleReplay = (() => {
                     break;
                 case "event_positive":
                     BattleEffects.eventPositive(fx.target, fx.float_text);
-                    BattleSound.eventPositive();
+                    playSound(() => BattleSound.eventPositive());
                     break;
                 case "event_negative":
                     BattleEffects.eventNegative(fx.target, fx.float_text);
-                    BattleSound.eventNegative();
+                    playSound(() => BattleSound.eventNegative());
                     break;
                 case "weather_announce":
                     BattleEffects.startWeatherEffect(fx.weather);
@@ -106,24 +114,24 @@ const BattleReplay = (() => {
                     break;
                 case "endure":
                     BattleEffects.endure(fx.target);
-                    BattleSound.endure();
+                    playSound(() => BattleSound.endure());
                     BattleEffects.updateSpeed(fx.target, fx.new_speed, fx.target === "a" ? maxA : maxB);
                     break;
                 case "stop":
                     BattleEffects.stop(fx.target);
-                    BattleSound.stop();
+                    playSound(() => BattleSound.stop());
                     break;
                 case "stop_both":
                     BattleEffects.stopBoth();
-                    BattleSound.stopBoth();
+                    playSound(() => BattleSound.stopBoth());
                     break;
                 case "decel":
                     BattleEffects.decel(fx.a_old, fx.a_new, fx.b_old, fx.b_new, maxA, maxB);
-                    BattleSound.decel();
+                    playSound(() => BattleSound.decel());
                     break;
                 case "battle_end":
                     BattleEffects.battleEnd(fx.winner);
-                    BattleSound.battleEnd(fx.winner);
+                    playSound(() => BattleSound.battleEnd(fx.winner));
                     pause();
                     showEndControls();
                     break;
@@ -162,9 +170,14 @@ const BattleReplay = (() => {
 
     function skip() {
         pause();
-        while (currentIndex < logData.length) {
-            processEntry(logData[currentIndex]);
-            currentIndex++;
+        soundSuppressed = true;
+        try {
+            while (currentIndex < logData.length) {
+                processEntry(logData[currentIndex]);
+                currentIndex++;
+            }
+        } finally {
+            soundSuppressed = false;
         }
     }
 
@@ -325,6 +338,10 @@ const BattleReplay = (() => {
         skip,
         restart,
         setSpeed,
+        goBack() {
+            sessionStorage.setItem("close_ranked_modal_after_battle", "1");
+            history.back();
+        },
         toggleSound() {
             const on = BattleSound.toggle();
             const btn = document.getElementById("btn-sound");

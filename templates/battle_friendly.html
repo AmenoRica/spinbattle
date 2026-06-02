@@ -190,8 +190,42 @@
         #battle-log::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
 
         .speed-track {
-            background: radial-gradient(ellipse at center, #374151 0%, #1f2937 100%);
+            height: 16px;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0)),
+                radial-gradient(ellipse at center, #374151 0%, #111827 100%);
             border-radius: 9999px;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.55), 0 8px 24px rgba(0,0,0,0.28);
+            padding: 2px;
+        }
+
+        .speed-track > div {
+            position: relative;
+            box-shadow: 0 0 14px rgba(129, 140, 248, 0.55);
+        }
+
+        .speed-track > div::after {
+            content: "";
+            position: absolute;
+            inset: 1px 3px auto 3px;
+            height: 35%;
+            border-radius: 9999px;
+            background: rgba(255,255,255,0.35);
+            opacity: 0.75;
+        }
+
+        .speed-value {
+            display: inline-flex;
+            align-items: baseline;
+            justify-content: center;
+            gap: 3px;
+            min-width: 48px;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            background: rgba(17, 24, 39, 0.7);
+            border: 1px solid rgba(75, 85, 99, 0.9);
+            color: #e5e7eb;
         }
 
         @keyframes countdownPulse {
@@ -318,11 +352,11 @@
                 <p id="spin-a-name" class="text-sm font-bold mt-3 truncate max-w-[350px] mx-auto"></p>
                 <p id="spin-a-type" class="text-xs font-bold mt-1"></p>
                 <p id="spin-a-score" class="text-xs mt-1 hidden"></p>
-                <div class="w-24 mx-auto mt-2">
-                    <div class="speed-track h-2.5 overflow-hidden">
+                <div class="w-36 sm:w-44 mx-auto mt-3">
+                    <div class="speed-track overflow-hidden">
                         <div id="speed-bar-a" class="h-full rounded-full transition-all duration-300 bg-indigo-400" style="width:100%"></div>
                     </div>
-                    <p class="text-xs text-gray-500 mt-1"><span id="speed-val-a">0</span></p>
+                    <p class="text-xs mt-2"><span class="speed-value"><span id="speed-val-a">0</span><span class="text-[10px] text-gray-400">{% trans "회전" %}</span></span></p>
                 </div>
             </div>
 
@@ -337,11 +371,11 @@
                 <p id="spin-b-name" class="text-sm font-bold mt-3 truncate max-w-[350px] mx-auto"></p>
                 <p id="spin-b-type" class="text-xs font-bold mt-1"></p>
                 <p id="spin-b-score" class="text-xs mt-1 hidden"></p>
-                <div class="w-24 mx-auto mt-2">
-                    <div class="speed-track h-2.5 overflow-hidden">
+                <div class="w-36 sm:w-44 mx-auto mt-3">
+                    <div class="speed-track overflow-hidden">
                         <div id="speed-bar-b" class="h-full rounded-full transition-all duration-300 bg-indigo-400" style="width:100%"></div>
                     </div>
-                    <p class="text-xs text-gray-500 mt-1"><span id="speed-val-b">0</span></p>
+                    <p class="text-xs mt-2"><span class="speed-value"><span id="speed-val-b">0</span><span class="text-[10px] text-gray-400">{% trans "회전" %}</span></span></p>
                 </div>
             </div>
         </div>
@@ -372,7 +406,7 @@
             </div>
             <div id="end-controls" class="hidden flex items-center justify-center gap-4 mt-3 pt-3 border-t border-gray-700">
                 <button onclick="BattleReplay.restart()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded transition text-sm">{% trans "다시 보기" %}</button>
-                <a href="/" onclick="history.back(); return false;" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition text-sm">{% trans "돌아가기" %}</a>
+                <a href="/" onclick="BattleReplay.goBack(); return false;" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-300 rounded transition text-sm">{% trans "돌아가기" %}</a>
             </div>
         </div>
     </main>
@@ -392,6 +426,6 @@
     </script>
     <script src="{% static 'js/battle-sound.js' %}?v=6"></script>
     <script src="{% static 'js/battle-effects.js' %}?v=7"></script>
-    <script src="{% static 'js/battle.js' %}?v=9"></script>
+    <script src="{% static 'js/battle.js' %}?v=12"></script>
 </body>
 </html>

@@ -10,6 +10,8 @@ from .weather import WEATHER_STAT_MODS, WEATHER_CRIT_BONUS, WEATHER_EVENTS
 ACCEL_BASE_CHANCE = 0.15
 ACCEL_LUCK_SCALE = 0.55
 ACCEL_AMOUNT_FACTOR = 6.0
+ACCEL_FADE_START_TURN = 21
+ACCEL_DISABLED_TURN = 26
 
 BASE_DAMAGE_ATTACK_SCALE = 0.18
 BASE_DAMAGE_SPEED_SCALE = 0.02
@@ -77,6 +79,15 @@ NEGATIVE_EVENTS = _build_negatives()
 WEATHER_RAIN_INFLUX_CHANCE = 0.08
 WEATHER_SNOWSTORM_CHANCE = 0.08
 WEATHER_SNOWSTORM_PCT = 0.20
+
+
+def _accel_turn_multiplier(turn):
+    if turn >= ACCEL_DISABLED_TURN:
+        return 0.0
+    if turn < ACCEL_FADE_START_TURN:
+        return 1.0
+    fade_turns = ACCEL_DISABLED_TURN - ACCEL_FADE_START_TURN + 1
+    return max((ACCEL_DISABLED_TURN - turn) / fade_turns, 0.0)
 
 
 def _pick_event(events, rng):
@@ -284,13 +295,16 @@ def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=No
         })
         log_entries.append({"text": "", "effects": []})
 
+        accel_turn_multiplier = _accel_turn_multiplier(turn)
         for spin, side in [(a, "a"), (b, "b")]:
+            if accel_turn_multiplier <= 0:
+                continue
             chance = ACCEL_BASE_CHANCE + ACCEL_LUCK_SCALE * (spin["luck"] / 100)
             if rng.random() < chance:
                 old_speed = spin["speed"]
-                boost = ACCEL_AMOUNT_FACTOR * math.sqrt(spin["acceleration"])
+                boost = ACCEL_AMOUNT_FACTOR * math.sqrt(spin["acceleration"]) * accel_turn_multiplier
                 if "speed_recover_bonus" in spin:
-                    boost += spin["speed_recover_bonus"]
+                    boost += spin["speed_recover_bonus"] * accel_turn_multiplier
                 spin["speed"] += boost
                 if spin["speed"] > spin["max_speed"]:
                     spin["max_speed"] = spin["speed"]
@@ -372,6 +386,8 @@ def simulate(hash_a, hash_b, rng, name_a="A", name_b="B", type_a=None, type_b=No
                     "attacker": atk_side,
                     "defender": def_side,
                     "damage": round(final_damage, 1),
+                    "old_speed": round(old_speed, 1),
+                    "new_speed": round(max(defender["speed"], 0), 1),
                     "crit": is_crit,
                     "crit_mult": round(multiplier, 1) if is_crit else None,
                     "type_mult": round(type_mult, 2),

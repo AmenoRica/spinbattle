@@ -213,6 +213,7 @@ Max turns: 35
 - **No REST framework**: Use `JsonResponse` directly for any API endpoints.
 - **Placement matches**: New spins automatically play 10 ranked placement matches (`PLACEMENT_ROUNDS = 10` in `accounts/views.py`). Results shown via JS modal on upload.
 - **Static file cache busting**: When modifying any file in `static/js/` or `static/css/`, you **MUST** increment the version number in the corresponding `{% static %}` tag in the template that references it.
+- **File deletion policy**: Never delete files with `rm`/`unlink`/destructive git checkout. If deletion is required, move targets to Trash only (for example `mv <path> ~/.Trash/` on macOS).
 
 ---
 

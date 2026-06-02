@@ -136,6 +136,14 @@
 <script src="{% static 'js/crop.js' %}?v=2"></script>
 <script>
 (function() {
+    const imageCropper = (typeof ImageCropper !== "undefined" && ImageCropper)
+        ? ImageCropper
+        : {
+            showModal: () => {},
+            getCroppedFile: () => null,
+            reset: () => {},
+        };
+
     const fileInput = document.getElementById("{{ form.image.id_for_label }}");
     const cropCancel = document.getElementById("crop-cancel");
     const cropModal = document.getElementById("crop-modal");
@@ -150,7 +158,7 @@
             const file = e.target.files[0];
             if (!file) return;
             if (!file.type.startsWith("image/")) return;
-            ImageCropper.showModal(file);
+            imageCropper.showModal(file);
         });
     }
 
@@ -160,7 +168,7 @@
             if (window.Cropper && fileInput) {
                 fileInput.value = "";
             }
-            ImageCropper.reset();
+            imageCropper.reset();
         };
     }
 
@@ -169,7 +177,7 @@
             e.preventDefault();
 
             const fd = new FormData(form);
-            const croppedFile = ImageCropper.getCroppedFile();
+            const croppedFile = imageCropper.getCroppedFile();
             if (croppedFile) {
                 fd.set("{{ form.image.html_name }}", croppedFile, croppedFile.name);
             }
@@ -254,6 +262,19 @@
     };
 
     function showPlacementModal(spinName, results) {
+        if (!results.length) {
+            const modal = document.createElement("div");
+            modal.id = "placement-modal";
+            modal.className = "fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4";
+            modal.innerHTML = `<div class="bg-gray-800 rounded-lg max-w-md w-full p-6">
+                <h3 class="text-lg font-bold mb-1">{% trans "배치 매치 대기" %}</h3>
+                <p class="text-sm text-gray-400 mb-4">${spinName} — {% trans "대전 가능한 상대가 없어 배치 매치를 진행하지 못했습니다." %}</p>
+                <button type="button" onclick="document.getElementById('placement-modal').remove(); window.location.href='{% url 'my_spins' %}';" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white py-2 rounded transition">{% trans "확인" %}</button>
+            </div>`;
+            document.body.appendChild(modal);
+            return;
+        }
+
         const rows = results.map(r => {
             const resultText = r.result === "win" ? "{% trans '승' %}" : r.result === "loss" ? "{% trans '패' %}" : "{% trans '무' %}";
             const resultClass = r.result === "win" ? "text-green-400" : r.result === "loss" ? "text-red-400" : "text-yellow-400";

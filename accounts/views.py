@@ -1,9 +1,11 @@
 import hashlib
 import math
 import random
+import time
 
 from django.contrib.auth import login
 from django.contrib.auth.decorators import login_required
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.db.models import Count, Prefetch, Sum
 from django.db.models.functions import Coalesce
@@ -11,6 +13,7 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 
 from django.utils.translation import get_language, gettext as _
+from django.utils import timezone
 
 from battle.engine import simulate
 from battle.rating import compute_new_ratings
@@ -37,23 +40,62 @@ def rng_choice(queryset, weights):
 
 
 PLACEMENT_ROUNDS = 10
+IP_UPLOAD_DAILY_LIMIT = 100
+IP_UPLOAD_BLOCK_SECONDS = 86400
+
+
+def _client_ip(request):
+    xff = request.META.get("HTTP_X_FORWARDED_FOR", "")
+    if xff:
+        return xff.split(",")[0].strip()
+    return (request.META.get("REMOTE_ADDR") or "unknown").strip()
+
+
+def _upload_limit_info(ip):
+    blocked_key = f"upload_block:{ip}"
+    blocked_until = cache.get(blocked_key)
+    if blocked_until:
+        return True, max(int(blocked_until - time.time()), 1)
+    day_key = timezone.localdate().isoformat()
+    count_key = f"upload_count:{ip}:{day_key}"
+    uploaded_count = int(cache.get(count_key, 0))
+    return uploaded_count >= IP_UPLOAD_DAILY_LIMIT, 0
+
+
+def _increase_upload_count(ip):
+    day_key = timezone.localdate().isoformat()
+    count_key = f"upload_count:{ip}:{day_key}"
+    added = cache.add(count_key, 1, timeout=IP_UPLOAD_BLOCK_SECONDS)
+    if added:
+        uploaded_count = 1
+    else:
+        try:
+            uploaded_count = cache.incr(count_key)
+        except ValueError:
+            cache.set(count_key, 1, timeout=IP_UPLOAD_BLOCK_SECONDS)
+            uploaded_count = 1
+    if uploaded_count >= IP_UPLOAD_DAILY_LIMIT:
+        blocked_until = time.time() + IP_UPLOAD_BLOCK_SECONDS
+        cache.set(f"upload_block:{ip}", blocked_until, timeout=IP_UPLOAD_BLOCK_SECONDS)
 
 
 def _run_placement(spin_image):
-    candidates = SpinImage.objects.exclude(pk=spin_image.pk)
-    if not candidates.exists():
+    candidate_list = list(SpinImage.objects.exclude(pk=spin_image.pk))
+    if not candidate_list:
         return []
-    candidate_list = list(candidates)
+    rng = random.Random()
+    weather = "normal"
     results = []
+    my_score = spin_image.battle_score
+    my_wins = spin_image.wins
+    my_losses = spin_image.losses
+    opp_state = {
+        c.pk: {"score": c.battle_score, "wins": c.wins, "losses": c.losses}
+        for c in candidate_list
+    }
     for i in range(PLACEMENT_ROUNDS):
-        weights = [1.0 / (1.0 + abs(c.battle_score - spin_image.battle_score) / 200.0) for c in candidate_list]
+        weights = [1.0 / (1.0 + abs(opp_state[c.pk]["score"] - my_score) / 200.0) for c in candidate_list]
         opp = rng_choice(candidate_list, weights)
-        spin_image.refresh_from_db()
-        opp = SpinImage.objects.get(pk=opp.pk)
-
-        rng = random.Random()
-        city = random_city(rng)
-        weather = get_weather_for_city(city)
         log = simulate(spin_image.hash, opp.hash, rng, spin_image.name, opp.name, spin_image.spin_type, opp.spin_type, lang="ko", weather=weather, city_name="")
 
         last_effect = None
@@ -63,22 +105,25 @@ def _run_placement(spin_image):
                     last_effect = eff
         winner = last_effect.get("winner", "draw") if last_effect else "draw"
 
-        old_a = spin_image.battle_score
-        old_b = opp.battle_score
+        old_a = my_score
+        old_b = opp_state[opp.pk]["score"]
 
         win_a, loss_a = (1, 0) if winner == "a" else (0, 1) if winner == "b" else (0, 0)
-        win_b, loss_b = (0, 0) if winner == "a" else (1, 0) if winner == "b" else (0, 0)
+        win_b, loss_b = (0, 1) if winner == "a" else (1, 0) if winner == "b" else (0, 0)
 
         new_a, new_b = compute_new_ratings(old_a, old_b, winner)
         SpinImage.objects.filter(pk=spin_image.pk).update(
-            wins=spin_image.wins + win_a, losses=spin_image.losses + loss_a, battle_score=new_a
+            wins=my_wins + win_a, losses=my_losses + loss_a, battle_score=new_a
         )
         SpinImage.objects.filter(pk=opp.pk).update(
-            wins=opp.wins + win_b, losses=opp.losses + loss_b, battle_score=new_b
+            wins=opp_state[opp.pk]["wins"] + win_b, losses=opp_state[opp.pk]["losses"] + loss_b, battle_score=new_b
         )
-        spin_image.battle_score = new_a
-        spin_image.wins += win_a
-        spin_image.losses += loss_a
+        my_score = new_a
+        my_wins += win_a
+        my_losses += loss_a
+        opp_state[opp.pk]["score"] = new_b
+        opp_state[opp.pk]["wins"] += win_b
+        opp_state[opp.pk]["losses"] += loss_b
 
         results.append({
             "round": i + 1,
@@ -88,6 +133,9 @@ def _run_placement(spin_image):
             "old_score": old_a,
             "new_score": new_a,
         })
+    spin_image.battle_score = my_score
+    spin_image.wins = my_wins
+    spin_image.losses = my_losses
     return results
 
 
@@ -119,6 +167,12 @@ def my_spins(request):
                 return redirect("my_spins")
 
         elif form_type == "upload":
+            client_ip = _client_ip(request)
+            is_blocked, remain_seconds = _upload_limit_info(client_ip)
+            if is_blocked:
+                remain_hours = max(1, math.ceil(remain_seconds / 3600)) if remain_seconds else 24
+                upload_form.add_error("image", _("업로드 한도를 초과했습니다. 약 %(hours)s시간 뒤 다시 시도해주세요.") % {"hours": remain_hours})
+                return render(request, "accounts/my_spins.html", {"profile_form": profile_form, "form": upload_form, "spin_images": spin_images})
             upload_form = SpinImageForm(request.POST, request.FILES)
             if upload_form.is_valid():
                 spin_image = upload_form.save(commit=False)
@@ -140,6 +194,7 @@ def my_spins(request):
                         return render(request, "accounts/my_spins.html", {"profile_form": profile_form, "form": upload_form, "spin_images": spin_images})
 
                 spin_image.save()
+                _increase_upload_count(client_ip)
                 placement_results = _run_placement(spin_image)
                 return JsonResponse({
                     "placement_spin_name": spin_image.name,
